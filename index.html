@@ -3,17 +3,16 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Anatomie">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#fbfaf7" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-title" content="Anatomy">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#000000">
 <meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
-<title>Anatomie</title>
+<title>Anatomy</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="description" content="Atlas d'anatomie fonctionnelle pour la musculation : planches illustrées et légendées, muscles animés, biomécanique interactive et 112 exercices, avec les sources de chaque repère.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wdth,wght@0,75..100,400..700;1,75..100,400..700&family=Instrument+Serif:ital@0;1&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wdth,wght@0,75..100,400..700;1,75..100,400..700&family=Instrument+Serif:ital@0;1&family=Unbounded:wght@600..900&display=swap">
 <style>
 /* Anatomie — planche d'anatomie illustrée (contours d'encre, aplats, reflets) posée dans une mise en page de fiche produit.
    Pas de cadres : des bandes pleine largeur, des filets fins, des illustrations posées sur la page.
@@ -1629,8 +1628,8 @@ body.pod-on .brand{display:none}
 }
 
 /* ================= Corps 3D ================= */
-.c3{position:relative; height:100dvh; min-height:480px; overflow:hidden; background:#000; --c3-accent:#ff453a; touch-action:none; -webkit-user-select:none; user-select:none}
-.c3:not(.c3-clair){--fg:#f5f5f7; --fg-2:#a1a1a6; --fg-3:#8e8e93; --glass:rgba(16,16,18,.72); --glass-line:rgba(255,255,255,.10); --line:rgba(255,255,255,.08); --line-2:rgba(255,255,255,.15); --line-3:rgba(255,255,255,.28); --surface-2:#1c1c1f; --surface-hi:#313136; --red-text:#ff453a; --accent:#2997ff; color:#f5f5f7}
+.c3{position:relative; height:100dvh; min-height:480px; overflow:hidden; background:#000; --c3-accent:#f4f4f1; touch-action:none; -webkit-user-select:none; user-select:none}
+.c3:not(.c3-clair){--fg:#f5f5f7; --fg-2:#a1a1a6; --fg-3:#8e8e93; --glass:rgba(16,16,18,.72); --glass-line:rgba(255,255,255,.10); --line:rgba(255,255,255,.08); --line-2:rgba(255,255,255,.15); --line-3:rgba(255,255,255,.28); --surface-2:#151515; --surface-hi:#2b2b2b; --red-text:#b9b8b4; --accent:#f1f1ee; color:#f1f1ee}
 .c3.c3-clair{background:#f6f4ef; --c3-accent:#e0261c}
 .c3-cv{position:absolute; inset:0; width:100%; height:100%; display:block; cursor:grab; touch-action:none; outline:0}
 .c3-glisse .c3-cv{cursor:grabbing}
@@ -1705,12 +1704,22 @@ body.pod-on .brand{display:none}
 .c3-nu .c3-cv{pointer-events:none}
 .c3-nu .c3-noms button{pointer-events:none}
 
+/* Repères d'affiche : coins de cadrage et libellé, discrets. */
+.c3-coin{position:absolute; z-index:3; width:18px; height:18px; pointer-events:none; opacity:.55; border:0 solid var(--fg)}
+.c3-coin.a{left:calc(50% - min(31vw, 300px)); top:calc(64px + var(--top, 0px)); border-left-width:1px; border-top-width:1px}
+.c3-coin.b{right:calc(50% - min(31vw, 300px)); top:calc(64px + var(--top, 0px)); border-right-width:1px; border-top-width:1px}
+.c3-coin.c{left:calc(50% - min(31vw, 300px)); bottom:calc(var(--bot, 80px) + 62px); border-left-width:1px; border-bottom-width:1px}
+.c3-coin.d{right:calc(50% - min(31vw, 300px)); bottom:calc(var(--bot, 80px) + 62px); border-right-width:1px; border-bottom-width:1px}
+.c3-rec{position:absolute; z-index:3; left:50%; top:calc(66px + var(--top, 0px)); transform:translateX(-50%); display:flex; align-items:center; gap:7px; font:500 10.5px var(--f-mono); letter-spacing:.14em; text-transform:uppercase; color:var(--fg-2); pointer-events:none}
+.c3-rec b{width:6px; height:6px; border-radius:50%; background:var(--fg)}
+.c3-nu .c3-coin,.c3-rec{display:none}
+@media (max-width: 759px){ .c3-coin{display:none} }
+
 /* Récit de l'accueil en 3D, et carte à imprimer */
 .story-3d{position:absolute; inset:0; opacity:0; transition:opacity .9s var(--ease); pointer-events:none}
 .story.en3d .story-3d{opacity:1}
 .story.en3d .story-map .map{visibility:hidden}
-.story.en3d .story-stick{background:#000; --fg:#f5f5f7; --fg-2:#a1a1a6; --fg-3:#8e8e93; --line:rgba(255,255,255,.08); --line-2:rgba(255,255,255,.15); --line-3:rgba(255,255,255,.28); --surface-2:#1c1c1f; --red-text:#ff453a; --accent:#2997ff; color:#f5f5f7}
-.story.en3d .story-txt h1,.story.en3d .story-txt h2{color:#f5f5f7}
+.story.en3d .story-stick{background:#000}
 .c3p-prev{margin-top:16px; border:1px solid var(--line-2); border-radius:12px; overflow:hidden; background:#fff; min-height:140px; display:grid; place-items:center}
 .c3p-prev img{display:block; width:100%; height:auto; -webkit-touch-callout:default}
 .c3p-prev p{padding:28px; margin:0; color:#6e6e73}
@@ -1724,6 +1733,67 @@ body[data-view="corps"] #main{padding:0}
   #c3-print img{display:block; width:100%; height:auto}
   @page{margin:0}
 }
+
+/* ================= Direction artistique : sombre, brute, noir et blanc =================
+   Même organisation du site ; seules les couleurs, les formes et quelques titres changent. Les couleurs vives
+   deviennent des gris ou des teintes sourdes ; le thème clair n'existe plus. */
+:root,:root[data-theme="dark"],:root[data-theme="light"]{
+  --bg:#000000; --bg-2:#060606; --surface:#0d0d0d; --surface-2:#151515; --surface-3:#212121; --surface-hi:#2b2b2b;
+  --glass:rgba(8,8,8,.74); --glass-strong:rgba(10,10,10,.92); --glass-line:rgba(255,255,255,.14);
+  --line:rgba(255,255,255,.09); --line-2:rgba(255,255,255,.17); --line-3:rgba(255,255,255,.32);
+  --fg:#f1f1ee; --fg-2:#a09f9b; --fg-3:#7d7c78; --fg-inv:#000000;
+  --accent:#f1f1ee; --accent-2:#d8d8d4; --accent-ink:#000000; --accent-soft:rgba(255,255,255,.12);
+  --red:#cfcfcb; --orange:#a9a39a; --yellow:#cdc8ba; --green:#9dab9f; --teal:#a0b0b6; --blue:#9ba5b4; --purple:#a8a2b4; --pink:#b5a4a8;
+  --good:#b4c0b6; --warn:#cfcaba; --crit:#f1f1ee;
+  --rec-a:#56635a; --rec-b:#8e8975; --rec-c:#dcdcd8;
+  --p:#f1f1ee; --s:#8c8b87; --t-line:#bcbbb7; --hatch-bg:rgba(255,255,255,.12);
+  --ago:#f1f1ee; --anta:#7c7b77;
+  --v1:#5a5a57; --v2:#b9b8b4; --v3:#8e8d89; --v4:#dcdcd8;
+  --z1:#55554f; --z2:#77766f; --z3:#9a9992; --z4:#bfbeb7; --z5:#f1f1ee;
+  --mh:0; --ms:0%; --ml:33%;
+  --skin:#181818; --skin-line:rgba(255,255,255,.16); --neutre:#1a1a1a; --seam:#000000;
+  --bone:#d6d6d2; --bone-hi:#f1f1ee; --bone-line:#000000; --tendon:#e4e4e0; --tw:#dededa; --tw-op:.84;
+  --lig:#b7b7b3; --cart:#a6a6a2; --fascia:#8d8d89; --nerf:#cecdc9;
+  --st-skin:#1b1b1b; --st-skin-far:rgba(255,255,255,.04);
+  --fig:#d4d4d0; --fig-2:#989894; --fig-far:#565652; --fig-edge:#0e0e0e; --eq:#868682; --eq-line:#989894; --frame:#343432;
+  --stage-a:#0b0b0b; --stage-b:#000000;
+  --ink:#000000; --dim-m:#383836; --dim-h:#52524f;
+  --sel:#f1f1ee; --glow-red:rgba(255,255,255,.22);
+  --red-text:#b9b8b4; --disc:#e4e4e0; --sheet-bg:#080808;
+  --logo-m:#d6d6d2; --logo-h:#ffffff; --logo-k:#8a8a86;
+  --f-wide:"Unbounded","Arial Black","Helvetica Neue",Helvetica,Arial,sans-serif;
+  --r-s:2px; --r:3px; --r-l:4px;
+  color-scheme:dark;
+}
+html,body{background:#000}
+/* Grain d'affiche, sur tout le site. */
+html::after{content:""; position:fixed; inset:0; z-index:400; pointer-events:none; opacity:.085; background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .6 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>")}
+@media print{ html::after{display:none} }
+/* Formes : angles vifs, filets fins. */
+.btn,.chip,.seg,.seg button,.ov-pill,.dock,.glass,.card,.badge,.c3-regs button,.c3-fiche,.pal-box,.toast,select,textarea,.icon-btn,.menu-btn,.dock-ico,.warn-box,.c3-bulle,.c3p-prev{border-radius:2px!important}
+.dock{border:1px solid var(--line-2); box-shadow:none}
+.btn.pri{background:var(--fg); color:#000}
+.kicker,.eyebrow{font-family:var(--f-mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase; font-weight:500}
+.kicker.red,.eyebrow.red{color:var(--fg-2)}
+a{text-decoration-color:var(--line-3)}
+/* Corps en 3D */
+.c3-tete h1{font-family:var(--f-wide); font-weight:700; font-size:22px; letter-spacing:-.01em; text-transform:uppercase; margin:8px 0 16px}
+.c3-regs button{background:rgba(0,0,0,.5); font-family:var(--f-mono); font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; min-height:32px}
+.c3-regs button[aria-pressed="true"]{background:var(--fg); color:#000; border-color:var(--fg)}
+.c3-rail button[aria-pressed="true"] i{background:var(--fg)}
+/* Accueil : le titre, en bas, façon affiche. Le centre est net, les bords filent. */
+.hero-titre{position:absolute; z-index:6; left:max(var(--gut), calc((100 * var(--aw) - var(--maxw)) / 2 + 14px)); bottom:10px; pointer-events:none; font-family:var(--f-wide); font-weight:800; font-size:clamp(60px, calc(12.2 * var(--aw, 1vw)), 232px); line-height:.86; letter-spacing:-.03em; text-transform:uppercase; color:#f1f1ee; mix-blend-mode:difference; opacity:0; transform:translateY(18px); transition:opacity .9s var(--ease), transform 1.2s var(--ease)}
+.hero-titre span{display:block; white-space:nowrap}
+.hero-titre .net{-webkit-mask-image:linear-gradient(90deg, transparent 4%, #000 24%, #000 76%, transparent 96%); mask-image:linear-gradient(90deg, transparent 4%, #000 24%, #000 76%, transparent 96%)}
+.hero-titre .flou{position:absolute; left:0; top:0; filter:blur(.05em); -webkit-mask-image:linear-gradient(90deg, #000 0, #000 12%, transparent 30%, transparent 70%, #000 88%, #000 100%); mask-image:linear-gradient(90deg, #000 0, #000 12%, transparent 30%, transparent 70%, #000 88%, #000 100%)}
+.story.en3d .hero-titre{opacity:1; transform:none}
+.story.en3d.past .hero-titre{opacity:0; transform:translateY(-14px)}
+.story.en3d .scroll-hint{display:none}
+.story.en3d .story-txt h1{font-family:var(--f-wide); font-weight:800; text-transform:uppercase; letter-spacing:-.03em}
+/* Fine grille et repères, derrière le corps. */
+.story.en3d .story-stick::before{content:""; position:absolute; inset:0; z-index:4; pointer-events:none; background:linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px) 0 0 / 25% 100%, linear-gradient(0deg, rgba(255,255,255,.05) 1px, transparent 1px) 0 0 / 100% 33.34%}
+@media (min-width: 760px){ .story.en3d .story-txt [data-s="0"] h1{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0)} }
+@media (max-width: 759px){ .hero-titre{display:none} .story.en3d .story-txt h1{font-size:clamp(40px, 13.6vw, 66px); line-height:.9} }
 </style>
 <svg class="defs" aria-hidden="true" focusable="false">
   <defs>
@@ -1791,7 +1861,7 @@ body[data-view="corps"] #main{padding:0}
   <div class="menu-foot" id="menu-foot"></div>
 </nav>
 <nav class="dock" id="dock" aria-label="Navigation">
-  <a class="brand" href="#accueil" data-nav="accueil" aria-label="Anatomie, accueil"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><g class="lg-end lg-a"><path d="M5.2 5.2 9.4 9.4" stroke="var(--ink)" stroke-width="4.4" stroke-linecap="round" fill="none"/><path d="M5.2 5.2 9.4 9.4" stroke="var(--bone)" stroke-width="2.3" stroke-linecap="round" fill="none"/><circle cx="4.7" cy="4.7" r="2.8" fill="var(--bone-hi)" stroke="var(--ink)" stroke-width="1.3"/></g><g class="lg-end lg-b"><path d="M22.6 22.6l4.2 4.2" stroke="var(--ink)" stroke-width="4.4" stroke-linecap="round" fill="none"/><path d="M22.6 22.6l4.2 4.2" stroke="var(--bone)" stroke-width="2.3" stroke-linecap="round" fill="none"/><circle cx="27.3" cy="27.3" r="2.8" fill="var(--bone-hi)" stroke="var(--ink)" stroke-width="1.3"/></g><g class="lg-belly"><path d="M8.6 8.6C7.35 17.25 14.75 24.65 23.4 23.4 24.65 14.75 17.25 7.35 8.6 8.6Z" fill="var(--logo-m)" stroke="var(--ink)" stroke-width="1.4" stroke-linejoin="round"/><ellipse class="lg-hi" cx="17.3" cy="14.7" rx="5.2" ry="1.7" transform="rotate(45 17.3 14.7)" fill="var(--logo-h)"/><path d="M11.8 13.2c2.4 4.6 4.8 7 9 9" stroke="var(--logo-k)" stroke-width=".95" fill="none" stroke-linecap="round" opacity=".75"/></g></svg><span class="brand-t">Anatomie</span></a>
+  <a class="brand" href="#accueil" data-nav="accueil" aria-label="Anatomy, accueil"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><g class="lg-end lg-a"><path d="M5.2 5.2 9.4 9.4" stroke="var(--ink)" stroke-width="4.4" stroke-linecap="round" fill="none"/><path d="M5.2 5.2 9.4 9.4" stroke="var(--bone)" stroke-width="2.3" stroke-linecap="round" fill="none"/><circle cx="4.7" cy="4.7" r="2.8" fill="var(--bone-hi)" stroke="var(--ink)" stroke-width="1.3"/></g><g class="lg-end lg-b"><path d="M22.6 22.6l4.2 4.2" stroke="var(--ink)" stroke-width="4.4" stroke-linecap="round" fill="none"/><path d="M22.6 22.6l4.2 4.2" stroke="var(--bone)" stroke-width="2.3" stroke-linecap="round" fill="none"/><circle cx="27.3" cy="27.3" r="2.8" fill="var(--bone-hi)" stroke="var(--ink)" stroke-width="1.3"/></g><g class="lg-belly"><path d="M8.6 8.6C7.35 17.25 14.75 24.65 23.4 23.4 24.65 14.75 17.25 7.35 8.6 8.6Z" fill="var(--logo-m)" stroke="var(--ink)" stroke-width="1.4" stroke-linejoin="round"/><ellipse class="lg-hi" cx="17.3" cy="14.7" rx="5.2" ry="1.7" transform="rotate(45 17.3 14.7)" fill="var(--logo-h)"/><path d="M11.8 13.2c2.4 4.6 4.8 7 9 9" stroke="var(--logo-k)" stroke-width=".95" fill="none" stroke-linecap="round" opacity=".75"/></g></svg><span class="brand-t">Anatomy</span></a>
   <div class="dock-sw" id="dock-sw">
     <button type="button" class="dock-arr" data-dock="-1" aria-label="Partie précédente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 6 8.5 12l6 6"/></svg></button>
     <div class="dock-tw" id="dock-tw" tabindex="0" role="button" aria-label="Partie affichée : ouvrir le menu, ou glisser pour changer de partie">
@@ -7495,7 +7565,9 @@ window.ATLAS.UI_EN = {
 "crâne, colonne, cage thoracique et bassin": "skull, spine, rib cage and pelvis",
 "Profil": "Side",
 "Rendu": "Rendering",
-"Pierre": "Stone",
+"IRM": "MRI",
+"Chair": "Flesh",
+"Atlas 3D": "3D atlas",
 "Épuré": "Line art",
 "Pose": "Pose",
 "Imprimer une carte": "Print a card",
@@ -7539,12 +7611,12 @@ window.ATLAS.UI_EN = {
 "Carte complète": "Complete card",
 "Nom": "Name",
 "Date": "Date",
-"Modèle 3D : BodyParts3D, © The Database Center for Life Science, licence CC BY 4.0. Planche : Anatomie.": "3D model: BodyParts3D, © The Database Center for Life Science, CC BY 4.0 licence. Plate: Anatomie.",
+"Modèle 3D : BodyParts3D, © The Database Center for Life Science, licence CC BY 4.0. Planche : Anatomy.": "3D model: BodyParts3D, © The Database Center for Life Science, CC BY 4.0 licence. Plate: Anatomy.",
 "Aperçu de la carte": "Card preview",
 "Impression indisponible ici : enregistre l'image": "Printing unavailable here: save the image",
 "Enregistrement indisponible ici": "Saving unavailable here",
 "Image enregistrée": "Image saved",
-"Écorché : muscles striés, contre-jour chaud. Pierre : sculpture grise, la couleur ne sert qu'à désigner. Épuré : traits seuls, sans couleur, pour étudier la structure et se tester.": "Écorché: striated muscles, warm backlight. Stone: grey sculpture, colour only points things out. Line art: lines only, no colour, to study structure and test yourself.",
+"IRM : noir et blanc, muscles sombres et cloisons claires. Chair : teintes sombres et sourdes. Épuré : traits seuls, pour étudier la structure et se tester.": "MRI: black and white, dark muscles and bright septa. Flesh: dark, muted tones. Line art: lines only, to study structure and test yourself.",
 "Rendu du corps en 3D": "3D body rendering"
 };
 
@@ -9255,7 +9327,7 @@ var FS = [
 "#version 300 es",
 "precision highp float;",
 "in vec3 vN, vL, vNL, vVP; in vec4 vS; in vec2 vTT; flat in float vId;",
-"uniform sampler2D uState; uniform highp sampler2D uAxis; uniform vec3 uAccent, uTendon, uKeyC, uFillC, uAmbC, uRimC, uPaper; uniform vec4 uFx; uniform float uPick; uniform vec3 uBoxC, uBoxH; uniform float uBoxF;",
+"uniform sampler2D uState; uniform highp sampler2D uAxis; uniform vec3 uAccent, uTendon, uKeyC, uFillC, uAmbC, uRimC, uPaper; uniform vec4 uFx; uniform float uPick, uIrm; uniform vec3 uBoxC, uBoxH; uniform float uBoxF;",
 "layout(location=0) out vec4 oCol; layout(location=1) out vec4 oAux;",
 "float ign(vec2 p){ return fract(52.9829189 * fract(dot(p, vec2(.06711056, .00583715)))); }",
 "float h31(vec3 p){ p = fract(p * vec3(.1031, .1030, .0973)); p += dot(p, p.yxz + 33.33); return fract((p.x + p.y) * p.z); }",
@@ -9297,6 +9369,17 @@ var FS = [
 "    vec3 r1 = cross(dpy, N), r2 = cross(N, dpx); float det = dot(dpx, r1);",
 "    Nb = normalize(abs(det) * N - sign(det) * (hx * r1 + hy * r2));",
 "  }",
+"  /* IRM stylisée : pas de lumière dirigée. Le muscle est sombre, strié ; tendons, fascias et os sont clairs ;",
+"     chaque volume s'éclaircit sur ses bords, comme les cloisons claires entre les muscles d'une coupe. */",
+"  if (uIrm > .5){",
+"    float nz = clamp(N.z, 0., 1.), nzb = clamp(Nb.z, 0., 1.);",
+"    float I = mus > .5 ? mix(mix(.085, .36, h * h), .9, td) : (ty > .55 ? .9 : ty > .45 ? .62 : .58);",
+"    I *= .8 + .34 * vn(vL * 15.);",
+"    float bord = pow(1. - nz, 3.2), v = I * (.42 + .58 * pow(nzb, .8)) + bord * (mus > .5 ? .6 : .3);",
+"    v = mix(v, v * .38, dim * .9);",
+"    v = mix(v, max(v, .7 + .3 * bord) , hl);",
+"    oCol = vec4(vec3(v) * uKeyC, fade); oAux = vec4(Nb.xy * .5 + .5, hl, aux); return;",
+"  }",
 "  float lum = dot(base, vec3(.3, .59, .11));",
 "  base = mix(base, vec3(lum) * .55, dim * .9);",
 "  base = mix(base, uAccent, hl * .8);",
@@ -9321,6 +9404,7 @@ var FQ = [
 "float lin(float d){ float z = d * 2. - 1.; return 2. * uCam.x * uCam.y / (uCam.y + uCam.x - z * (uCam.y - uCam.x)); }",
 "float h21(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }",
 "float masque(vec2 p){ return step(.01, texture(uA, p).a) * texture(uC, p).a; }",
+"float forme(vec2 p){ return step(.01, texture(uA, p).a); }",
 "void main(){",
 "  vec4 a = texture(uA, vU), cc = texture(uC, vU); float m = step(.01, a.a), fade = cc.a, dC = lin(texture(uD, vU).r);",
 "  vec2 px = uPx * uP.x; vec3 c = cc.rgb;",
@@ -9329,29 +9413,41 @@ var FQ = [
 "  vec2 q = (vU - uDisc.xy) * vec2(uRes.x / uRes.y, 1.); float rd = length(q);",
 "  vec3 bg = mix(uBg0, uBg1, smoothstep(1.1, 0., length((vU - vec2(uDisc.x, .52)) * vec2(uRes.x / uRes.y, 1.2))));",
 "  bg = mix(bg, uDiscC, uDisc.w * (1. - smoothstep(uDisc.z - .004, uDisc.z + .004, rd)));",
+"  float d1 = lin(texture(uD, vU + vec2(px.x, 0.)).r), d2 = lin(texture(uD, vU - vec2(px.x, 0.)).r), d3 = lin(texture(uD, vU + vec2(0., px.y)).r), d4 = lin(texture(uD, vU - vec2(0., px.y)).r);",
+"  float eId = max(max(step(.002, abs(a1.a - a.a)), step(.002, abs(a2.a - a.a))), max(step(.002, abs(a3.a - a.a)), step(.002, abs(a4.a - a.a))));",
+"  float dn = min(min(d1, d2), min(d3, d4)), eD = smoothstep(.006, .02, dC - dn);",
+"  float ja = h21(vU * uRes) * 6.283;",
 "  vec3 col;",
 "  if (uP.y > .5){",
 "    /* Mode épuré : le papier, les traits, et la pièce choisie en aplat. */",
-"    float d1 = lin(texture(uD, vU + vec2(px.x, 0.)).r), d2 = lin(texture(uD, vU - vec2(px.x, 0.)).r), d3 = lin(texture(uD, vU + vec2(0., px.y)).r), d4 = lin(texture(uD, vU - vec2(0., px.y)).r);",
-"    float eId = max(max(step(.002, abs(a1.a - a.a)), step(.002, abs(a2.a - a.a))), max(step(.002, abs(a3.a - a.a)), step(.002, abs(a4.a - a.a))));",
-"    float dn = min(min(d1, d2), min(d3, d4)), eD = smoothstep(.006, .02, dC - dn);",
 "    float eN = smoothstep(.5, 1.1, max(max(distance(a1.xy, a.xy), distance(a2.xy, a.xy)), max(distance(a3.xy, a.xy), distance(a4.xy, a.xy))));",
 "    float sil = step(.01, abs(mA - m)), ink = max(max(eId * step(dC, dn + .004), eD), max(eN * .55, sil));",
 "    float f = max(fade, max(max(texture(uC, vU + vec2(px.x, 0.)).a * step(.01, a1.a), texture(uC, vU - vec2(px.x, 0.)).a * step(.01, a2.a)), max(texture(uC, vU + vec2(0., px.y)).a * step(.01, a3.a), texture(uC, vU - vec2(0., px.y)).a * step(.01, a4.a))));",
 "    col = mix(bg, c, m * fade); col = mix(col, uInk, clamp(ink, 0., 1.) * max(m, sil) * f);",
 "  } else {",
 "    /* Creux : deux rayons, pour le contact entre muscles voisins et pour les grands volumes. */",
-"    float occ = 0., rr = uP.x * 6. / max(dC, .3), ja = h21(vU * uRes) * 6.283;",
+"    float occ = 0., rr = uP.x * 6. / max(dC, .3);",
 "    for (int i = 0; i < 12; i++){ float an = float(i) * .5236 + ja; vec2 of = vec2(cos(an), sin(an)) * uPx * rr * (i < 6 ? 1. : 3.2); float dd = dC - lin(texture(uD, vU + of).r); occ += smoothstep(.002, .02, dd) * (1. - smoothstep(.05, .2, dd)); }",
 "    c *= 1. - occ / 12. * uP.w;",
-"    /* Profondeur de champ : flou léger loin du plan de netteté. */",
-"    float coc = clamp((abs(dC - uCam.z) - uCam.w * .4) / uCam.w, 0., 1.) * m;",
-"    if (coc > .02){ vec3 s = c; float wsum = 1.; for (int i = 0; i < 8; i++){ float an = float(i) * .7854 + .4; vec2 of = vec2(cos(an), sin(an)) * uPx * coc * 5. * uP.x; float mk = step(.01, texture(uA, vU + of).a); s += texture(uC, vU + of).rgb * mk; wsum += mk; } c = mix(c, s / wsum, coc); }",
-"    /* Halo : le contre-jour déborde un peu de la silhouette. */",
-"    float gl = 0.;",
-"    if (uHalo.w > 0.){ for (int i = 0; i < 12; i++){ float an = float(i) * .5236 + ja * .3; vec2 dir = vec2(cos(an), sin(an)) * uPx * uP.x; gl += masque(vU + dir * 5.) * .6 + masque(vU + dir * 13.) * .4; } gl = pow(gl / 12., 1.6) * uHalo.w; }",
-"    float cover = mA * fade;",
-"    col = mix(bg + uHalo.rgb * gl, c, cover);",
+"    float gl = 0., cover = mA * fade;",
+"    if (uP.z > .5){",
+"      /* IRM : cloisons claires entre les pièces, lisere clair sous la silhouette, et halo doux tout autour. */",
+"      float cloison = max(eId * step(dC, dn + .004), eD * .8);",
+"      c = mix(c, vec3(.9), cloison * .42);",
+"      float dedans = 0., dehors = 0.;",
+"      for (int i = 0; i < 12; i++){ float an = float(i) * .5236 + ja * .25; vec2 dir = vec2(cos(an), sin(an)) * uPx * uP.x; dedans += forme(vU + dir * 3.2); dehors += masque(vU + dir * 2.4) * .7 + masque(vU + dir * 12.) * .3; gl += masque(vU + dir * 22.); }",
+"      float lisere = smoothstep(.04, .55, 1. - dedans / 12.);",
+"      c = mix(c, vec3(.96), lisere * .9);",
+"      vec3 fond = bg + vec3(1.) * (smoothstep(.0, .5, dehors / 12.) * .5 + pow(gl / 12., 1.5) * .16) * (1. - m);",
+"      col = mix(fond, c, cover);",
+"    } else {",
+"      /* Profondeur de champ : flou léger loin du plan de netteté. */",
+"      float coc = clamp((abs(dC - uCam.z) - uCam.w * .4) / uCam.w, 0., 1.) * m;",
+"      if (coc > .02){ vec3 sm = c; float wsum = 1.; for (int i = 0; i < 8; i++){ float an = float(i) * .7854 + .4; vec2 of = vec2(cos(an), sin(an)) * uPx * coc * 5. * uP.x; float mk = step(.01, texture(uA, vU + of).a); sm += texture(uC, vU + of).rgb * mk; wsum += mk; } c = mix(c, sm / wsum, coc); }",
+"      /* Halo : le contre-jour déborde un peu de la silhouette. */",
+"      if (uHalo.w > 0.){ for (int i = 0; i < 12; i++){ float an = float(i) * .5236 + ja * .3; vec2 dir = vec2(cos(an), sin(an)) * uPx * uP.x; gl += masque(vU + dir * 5.) * .6 + masque(vU + dir * 13.) * .4; } gl = pow(gl / 12., 1.6) * uHalo.w; }",
+"      col = mix(bg + uHalo.rgb * gl, c, cover);",
+"    }",
 "  }",
 "  o = vec4(col, 1.);",
 "}"].join("\n");
@@ -9388,12 +9484,12 @@ function prog(gl, vs, fs){
 
 /* ---------- Styles de rendu ---------- */
 var STYLES = {
-  /* Écorché : muscles saumon striés, fascias crème, contre-jour chaud sur fond noir. */
-  ecorche: {muscle: "#b34f3e", tendon: "#f1e7d3", os: "#eadfc8", cart: "#bcc6c5", conj: "#eee4cf", peau: "#cdbfae", fib: 1, td: 1, spec: 1,
-    key: [1.04, .97, .9], fill: [.17, .15, .16], amb: [.2, .135, .125], rim: [1.05, .74, .42], bg0: "#000000", bg1: "#000000", disc: "#000000", discA: 0, ao: 1, halo: [1, .62, .3], haloA: .5},
-  /* Pierre : sculpture grise, la couleur ne sert qu'à désigner. */
-  pierre: {muscle: "#96938f", tendon: "#cfccc5", os: "#c4beb1", cart: "#a2abae", conj: "#c0bdb5", peau: "#8d8a86", fib: .8, td: .85, spec: .8,
-    key: [1.02, 1, .96], fill: [.16, .18, .22], amb: [.13, .135, .15], rim: [.6, .66, .76], bg0: "#000000", bg1: "#0d0d10", disc: "#000000", discA: 0, ao: 1, halo: [.6, .7, .9], haloA: .28},
+  /* IRM : noir et blanc. Muscles sombres striés, fascias, tendons et contour clairs. */
+  irm: {muscle: "#2a2a2a", tendon: "#e6e6e3", os: "#b0b0ad", cart: "#9a9a97", conj: "#e6e6e3", peau: "#888888", fib: 1, td: 1, spec: 0,
+    key: [1, 1, .99], fill: [0, 0, 0], amb: [0, 0, 0], rim: [0, 0, 0], bg0: "#000000", bg1: "#000000", disc: "#000000", discA: 0, ao: .75, halo: [1, 1, 1], haloA: 0, irm: 1, grain: .05},
+  /* Chair : la même scène en teintes sombres et sourdes. */
+  chair: {muscle: "#6a3a33", tendon: "#b8b0a2", os: "#a9a291", cart: "#7d8585", conj: "#aaa392", peau: "#8d8a86", fib: 1, td: 1, spec: .8,
+    key: [.92, .87, .82], fill: [.1, .1, .11], amb: [.12, .095, .09], rim: [.72, .7, .66], bg0: "#000000", bg1: "#000000", disc: "#000000", discA: 0, ao: 1, halo: [.9, .88, .84], haloA: .32},
   /* Papier : pour les cartes à imprimer, plâtre clair sur fond blanc. */
   papier: {muscle: "#c9c6c0", tendon: "#eeede8", os: "#e6e2d7", cart: "#ccd3d5", conj: "#e7e4dc", peau: "#c9c5bf", fib: .9, td: .8, spec: .25,
     key: [.8, .8, .79], fill: [.2, .2, .21], amb: [.42, .42, .43], rim: [.06, .06, .07], bg0: "#ffffff", bg1: "#ffffff", disc: "#ffffff", discA: 0, ao: .8, halo: [0, 0, 0], haloA: 0},
@@ -9454,7 +9550,7 @@ function creer(canvas, data, opt){
 
   /* ---------- État ---------- */
   var S = {
-    couche: opt.couche || 1, region: "", cote: "R", style: opt.style || "ecorche", sel: null, survol: -1,
+    couche: opt.couche || 1, region: "", cote: "R", style: opt.style || "irm", sel: null, survol: -1,
     a: new Float32Array(NE), ta: new Float32Array(NE), dl: new Float32Array(NE), g: new Float32Array(NE).fill(1), tg: new Float32Array(NE).fill(1), gd: new Float32Array(NE), gv: new Float32Array(NE).fill(1.6),
     hl: new Float32Array(NE), thl: new Float32Array(NE), dm: new Float32Array(NE), tdm: new Float32Array(NE),
     cam: {yaw: 0, pitch: 0, dist: 4.6, tx: 0, ty: .86, tz: 0}, camA: null, vyaw: 0,
@@ -9487,7 +9583,7 @@ function creer(canvas, data, opt){
     S.dirty = true; boucle();
   }
   function couleurs(){
-    var st = STYLES[S.style] || STYLES.ecorche, cols = [hex(st.peau), hex(st.muscle), hex(st.conj), hex(st.cart), hex(st.os)], tys = [.2, 1, .6, .5, .4];
+    var st = STYLES[S.style] || STYLES.irm, cols = [hex(st.peau), hex(st.muscle), hex(st.conj), hex(st.cart), hex(st.os)], tys = [.2, 1, .6, .5, .4];
     for (var k = 0; k < NE; k++){
       var e = ELS[k], c = (S.teinte && S.teinte(e, k)) || cols[e.c], o = (TW + k) * 4;
       /* Légère variation de valeur d'une pièce à l'autre : les volumes se détachent sans contour. */
@@ -9587,14 +9683,14 @@ function creer(canvas, data, opt){
     gl.bindTexture(gl.TEXTURE_2D, stTex); gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, TW, 2, gl.RGBA, gl.UNSIGNED_BYTE, stPix);
   }
   function scene(pick){
-    var st = STYLES[S.style] || STYLES.ecorche, u = P1.u;
+    var st = STYLES[S.style] || STYLES.irm, u = P1.u;
     gl.useProgram(P1.p); gl.bindVertexArray(vao);
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, stTex); gl.uniform1i(u.uState, 0);
     gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, axTex); gl.uniform1i(u.uAxis, 1);
     gl.uniformMatrix4fv(u.uVP, false, mVP); gl.uniformMatrix4fv(u.uV, false, mV); gl.uniformMatrix4fv(u.uB, false, BM);
     gl.uniform3fv(u.uMin, M.min); gl.uniform1f(u.uExt, M.ext); gl.uniform1f(u.uPick, pick ? 1 : 0);
     gl.uniform3fv(u.uAccent, hex(S.accent)); gl.uniform3fv(u.uTendon, hex(st.tendon)); gl.uniform3fv(u.uKeyC, st.key); gl.uniform3fv(u.uFillC, st.fill); gl.uniform3fv(u.uAmbC, st.amb); gl.uniform3fv(u.uRimC, st.rim); gl.uniform3fv(u.uPaper, hex(S.paper));
-    gl.uniform4f(u.uFx, st.fib, st.td, st.clean ? 1 : 0, st.spec);
+    gl.uniform4f(u.uFx, st.fib, st.td, st.clean ? 1 : 0, st.spec); gl.uniform1f(u.uIrm, st.irm ? 1 : 0);
     gl.uniform3fv(u.uBoxC, S.box.c); gl.uniform3fv(u.uBoxH, S.box.h); gl.uniform1f(u.uBoxF, S.box.f);
     gl.enable(gl.DEPTH_TEST); gl.disable(gl.BLEND); gl.disable(gl.CULL_FACE);
     /* On ne dessine que les pièces au moins un peu visibles, par plages contiguës. */
@@ -9613,7 +9709,7 @@ function creer(canvas, data, opt){
     if (S.capW){ pw = S.capW; ph = S.capH; sc = Math.max(1, pw / 900); }
     if (canvas.width !== pw || canvas.height !== ph){ canvas.width = pw; canvas.height = ph; }
     cible(pw, ph); etat(); camMat(pw, ph);
-    var st = STYLES[S.style] || STYLES.ecorche;
+    var st = STYLES[S.style] || STYLES.irm;
     gl.bindFramebuffer(gl.FRAMEBUFFER, fbo); gl.viewport(0, 0, pw, ph);
     gl.clearBufferfv(gl.COLOR, 0, st.clean ? hex(S.paper).concat(0) : [0, 0, 0, 0]); gl.clearBufferfv(gl.COLOR, 1, [0, 0, 0, 0]); gl.clearBufferfv(gl.DEPTH, 0, [1]);
     scene(false);
@@ -9624,7 +9720,7 @@ function creer(canvas, data, opt){
     gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, tD); gl.uniform1i(u.uD, 2);
     gl.uniform2f(u.uPx, 1 / pw, 1 / ph); gl.uniform2f(u.uRes, pw, ph);
     var foc = S.cam.dist, prof = S.dof ? Math.max(.12, S.cam.dist * .22) : 1e3;
-    gl.uniform4f(u.uCam, S.near, S.far, foc, prof); gl.uniform4f(u.uP, sc * (st.clean ? 1.15 : 1), st.clean ? 1 : 0, 0, st.ao);
+    gl.uniform4f(u.uCam, S.near, S.far, foc, prof); gl.uniform4f(u.uP, sc * (st.clean ? 1.15 : 1), st.clean ? 1 : 0, st.irm ? 1 : 0, st.ao);
     var bg0 = hex(st.clean ? S.paper : st.bg0), bg1 = hex(st.clean ? S.paper : st.bg1);
     gl.uniform3fv(u.uBg0, bg0); gl.uniform3fv(u.uBg1, bg1); gl.uniform3fv(u.uInk, hex(S.ink)); gl.uniform3fv(u.uDiscC, hex(st.disc));
     gl.uniform4f(u.uHalo, st.halo[0], st.halo[1], st.halo[2], S.capW ? 0 : st.haloA);
@@ -9636,7 +9732,7 @@ function creer(canvas, data, opt){
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tF); gl.uniform1i(u.uC, 0);
     gl.uniform2f(u.uPx, 1 / pw, 1 / ph); gl.uniform2f(u.uRes, pw, ph);
     var net = st.clean || S.capW;
-    gl.uniform4f(u.uF, net ? 0 : .5, net ? 0 : .022, net ? 0 : .22, 0);
+    gl.uniform4f(u.uF, net ? 0 : .5, net ? 0 : (st.grain || .022), net ? 0 : .22, 0);
     gl.drawArrays(gl.TRIANGLES, 0, 3); gl.bindVertexArray(null);
     if (opt.apresRendu) opt.apresRendu();
   }
@@ -9733,7 +9829,7 @@ function creer(canvas, data, opt){
     couche: function(n, net){ S.couche = Math.max(1, Math.min(7, n)); cibles(net ? "net" : ""); },
     /* Filtre de visibilité en plus de la couche (cadrage sur une région, pièce isolée…). */
     filtre: function(fn, net){ S.filtre = fn || null; cibles(net ? "net" : ""); },
-    style: function(s){ S.style = STYLES[s] ? s : "ecorche"; couleurs(); cibles("net"); boucle(); },
+    style: function(s){ S.style = STYLES[s] ? s : "irm"; couleurs(); cibles("net"); boucle(); },
     theme: function(o){ Object.assign(S, o); couleurs(); boucle(); },
     selection: function(fn, estomper){ S.sel = fn || null; S.estomper = !!estomper; selection(); },
     teinte: function(fn){ S.teinte = fn || null; couleurs(); boucle(); },
@@ -9836,7 +9932,7 @@ var IC = {
   x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>',
   boussole: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></svg>'
 };
-var RENDUS = [["ecorche", "Écorché"], ["pierre", "Pierre"], ["epure", "Épuré"]];
+var RENDUS = [["irm", "IRM"], ["chair", "Chair"], ["epure", "Épuré"]];
 var DATA = null, ATTENTE = null;
 function charger(urls){
   if (DATA) return Promise.resolve(DATA);
@@ -9848,15 +9944,16 @@ function charger(urls){
 }
 
 function monter(host, env){
-  var T = env.T, esc = env.esc, st = Object.assign({c: 1, r: "", rendu: "ecorche", lbl: false, pose: true, sel: null, vue: 0}, env.etat || {});
+  var T = env.T, esc = env.esc, st = Object.assign({c: 1, r: "", rendu: "irm", lbl: false, pose: true, sel: null, vue: 0}, env.etat || {});
   if (!COUCHES[st.c - 1]) st.c = 1;
-  if (!RENDUS.some(function(x){ return x[0] === st.rendu; })) st.rendu = "ecorche";
+  if (!RENDUS.some(function(x){ return x[0] === st.rendu; })) st.rendu = "irm";
   var eng = null, mort = false, intro = false, cv, R = {};
   host.innerHTML =
     '<div class="c3' + (env.nu ? " c3-nu" : "") + '" data-rendu="' + st.rendu + '">' +
       '<canvas class="c3-cv" role="img" aria-label="' + esc(T("Corps humain en trois dimensions")) + '"></canvas>' +
       '<svg class="c3-fil" aria-hidden="true"></svg><div class="c3-noms" aria-hidden="true"></div>' +
-      '<header class="c3-tete"><span class="kicker red">' + esc(T("Écorché")) + '</span><h1>' + esc(T("Corps en 3D")) + '</h1><p class="c3-cap"><b class="c3-num"></b><span class="c3-cn"></span></p><p class="c3-cd"></p></header>' +
+      '<i class="c3-coin a"></i><i class="c3-coin b"></i><i class="c3-coin c"></i><i class="c3-coin d"></i><span class="c3-rec"><b></b>' + esc(T("Atlas 3D")) + '</span>' +
+      '<header class="c3-tete"><span class="kicker red">' + esc(T("Anatomy")) + '</span><h1>' + esc(T("Corps en 3D")) + '</h1><p class="c3-cap"><b class="c3-num"></b><span class="c3-cn"></span></p><p class="c3-cd"></p></header>' +
       '<div class="c3-rail" role="group" aria-label="' + esc(T("Profondeur")) + '">' + COUCHES.map(function(c, i){ return '<button type="button" data-c="' + (i + 1) + '" aria-pressed="false" aria-label="' + esc(T(c[0])) + '"><b>0' + (i + 1) + '</b><i></i><span>' + esc(T(c[0])) + "</span></button>"; }).join("") + "</div>" +
       '<div class="c3-outils">' +
         '<div class="seg c3-vue" role="group" aria-label="' + esc(T("Vue")) + '"><button type="button" data-vue="0">' + esc(T("Face")) + '</button><button type="button" data-vue="90">' + esc(T("Profil")) + '</button><button type="button" data-vue="180">' + esc(T("Dos")) + "</button></div>" +
@@ -9941,7 +10038,7 @@ function monter(host, env){
   function theme(){
     if (!eng) return; var cs = getComputedStyle(root);
     var clair = st.rendu === "epure" && env.clair && env.clair();
-    eng.theme({accent: (cs.getPropertyValue("--c3-accent") || "#ff453a").trim(), paper: clair ? "#f6f4ef" : "#0a0a0b", ink: clair ? "#1d1d1f" : "#ecebe7"});
+    eng.theme({accent: (cs.getPropertyValue("--c3-accent") || "#f4f4f1").trim(), paper: clair ? "#f6f4ef" : "#000000", ink: clair ? "#1d1d1f" : "#ecebe7"});
     root.classList.toggle("c3-clair", !!clair);
   }
 
@@ -10596,7 +10693,7 @@ function updSync(){ var el = $("#sync-lbl"); if (el) el.textContent = location.p
 
 /* ================= Thème ================= */
 var root = document.documentElement, HOST_THEME = root.getAttribute("data-theme");
-function applyTheme(){ var t = P.prefs.theme; if (t === "light" || t === "dark") root.setAttribute("data-theme", t); else if (HOST_THEME) root.setAttribute("data-theme", HOST_THEME); else root.removeAttribute("data-theme"); }
+function applyTheme(){ root.setAttribute("data-theme", "dark"); }
 applyTheme();
 
 /* Coquille : barre de navigation en bas (logo, partie affichée qu'on fait glisser pour changer de partie, recherche,
@@ -10774,7 +10871,7 @@ function renderMenu(){
     list.addEventListener("mouseover", function(e){ var a = e.target.closest("[data-nav]"); if (a) menuHot(a.dataset.nav); });
     list.addEventListener("focusin", function(e){ var a = e.target.closest("[data-nav]"); if (a) menuHot(a.dataset.nav); });
     var th = P.prefs.theme === "light" || P.prefs.theme === "dark" ? P.prefs.theme : "auto";
-    $("#menu-foot").innerHTML = '<button type="button" data-nav="sources">Sources et méthode</button><button type="button" data-glossaire>Glossaire</button><button type="button" data-settings>Réglages et sauvegarde</button>' + '<span class="foot-segs">' + seg("lang", LANG, [["fr", "Français"], ["en", "English"]], "Langue") + seg("body", BODY, [["m", "Homme"], ["f", "Femme"]], "Corps") + seg("theme", th, [["auto", "Auto"], ["light", "Clair"], ["dark", "Sombre"]], "Thème") + "</span>";
+    $("#menu-foot").innerHTML = '<button type="button" data-nav="sources">Sources et méthode</button><button type="button" data-glossaire>Glossaire</button><button type="button" data-settings>Réglages et sauvegarde</button>' + '<span class="foot-segs">' + seg("lang", LANG, [["fr", "Français"], ["en", "English"]], "Langue") + seg("body", BODY, [["m", "Homme"], ["f", "Femme"]], "Corps") + "</span>";
   }
   $$("#menu-list [data-nav]").forEach(function(a){ if (a.dataset.nav === curView) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
   /* Les éléments réapparaissent en cascade à chaque ouverture. */
@@ -10977,8 +11074,7 @@ function openSettings(){
   openSheetHtml("reglages", "Réglages", "Préférences",
     '<div class="set-row"><div><b>Langue</b><p class="faint">Textes de l\'atlas et de l\'interface.</p></div>' + seg("lang", LANG, [["fr","Français"],["en","English"]], "Langue") + "</div>" +
     '<div class="set-row"><div><b>Corps</b><p class="faint">Morphologie des planches : homme ou femme.</p></div>' + seg("body", BODY, [["m","Homme"],["f","Femme"]], "Corps") + "</div>" +
-    '<div class="set-row"><div><b>Corps en 3D</b><p class="faint">Écorché : muscles striés, contre-jour chaud. Pierre : sculpture grise, la couleur ne sert qu\'à désigner. Épuré : traits seuls, sans couleur, pour étudier la structure et se tester.</p></div>' + seg("rendu3d", c3Rendu(), [["ecorche","Écorché"],["pierre","Pierre"],["epure","Épuré"]], "Rendu du corps en 3D") + "</div>" +
-    '<div class="set-row"><div><b>Thème</b><p class="faint">Suit le réglage de ton appareil par défaut.</p></div>' + seg("theme", th, [["auto","Auto"],["light","Clair"],["dark","Sombre"]], "Thème") + "</div>" +
+    '<div class="set-row"><div><b>Corps en 3D</b><p class="faint">IRM : noir et blanc, muscles sombres et cloisons claires. Chair : teintes sombres et sourdes. Épuré : traits seuls, pour étudier la structure et se tester.</p></div>' + seg("rendu3d", c3Rendu(), [["irm","IRM"],["chair","Chair"],["epure","Épuré"]], "Rendu du corps en 3D") + "</div>" +
     '<div class="set-row"><div><b>Niveau de lecture</b><p class="faint">Essentiel : l\'idée clé et quoi faire. Complet : études, nuances et détails anatomiques.</p></div>' + seg("lecture", P.prefs.lecture, [["ess","Essentiel"],["full","Complet"]], "Niveau de lecture") + "</div>" +
     '<div class="set-row"><div><b>Niveau des questions</b><p class="faint">Débutant : muscles de surface, rôles, définitions. Avancé : insertions, innervation, latin.</p></div>' + seg("niveau", P.prefs.niveau, [["deb","Débutant"],["int","Intermédiaire"],["av","Avancé"]], "Niveau des questions") + "</div>" +
     '<div class="set-row"><div><b>Animations</b><p class="faint">Figurines et muscles animés, ou fixes.</p></div>' + seg("anim", P.prefs.anim !== false, [[true,"Animées"],[false,"Fixes"]], "Animations") + "</div>" +
@@ -11021,7 +11117,7 @@ function setPref(name, val){
   if (name === "resume"){ if (val) P.last = lastSnap(); else delete P.last; }
   save();
   $$('[data-set="' + name + '"]').forEach(function(b){ b.setAttribute("aria-pressed", b.getAttribute("data-val") === String(name === "theme" ? (P.prefs.theme || "auto") : P.prefs[name]) ? "true" : "false"); });
-  if (name === "rendu3d"){ if (C3.v) C3.v.rendu(val); if (C3.story) C3.story.rendu(val === "epure" ? "ecorche" : val); }
+  if (name === "rendu3d"){ if (C3.v) C3.v.rendu(val); if (C3.story) C3.story.rendu(val === "epure" ? "irm" : val); }
   if (name === "theme"){ if (C3.v) C3.v.theme(); }
   if (name === "lecture"){ if (rendered.apprendre && AP.sub === "parcours") pcRender(); if (SH.cur && S[SH.cur.id]) refreshSheet(); }
   if (name === "anim"){ if (rendered.exercices) renderExGrid(); if (rendered.carte) updMapFig(); }
@@ -11386,7 +11482,7 @@ var STORY = [
 function storyCaps(){
   var nM = A.muscles.length, nSt = (A.studies || []).length;
   return [
-    {h1: "Anatomie", k: "Atlas interactif pour la musculation",
+    {h1: "Anatomy", k: "Atlas interactif pour la musculation",
      p: nM + " muscles du corps humain en planches légendées, avec leurs actions, leurs leviers et les exercices qui les sollicitent. Chaque repère chiffré renvoie à sa source.",
      cta: '<button type="button" class="btn pri lg" data-nav="carte">Ouvrir la carte</button>' + podBtn("visite", "Écouter la visite", "on-story")},
     {k: "Vue antérieure", h2: "L'épaule et le bras",
@@ -11465,7 +11561,7 @@ function homeLearn(){
 }
 
 function siteFoot(){
-  return '<footer class="site-foot"><div class="wrap"><div><p><b style="color:var(--fg)">Anatomie</b> · anatomie fonctionnelle, biomécanique et entraînement.</p><p>Planches tracées d\'après <a href="https://github.com/Z-Anatomy/Models-of-human-anatomy" target="_blank" rel="noopener">Z-Anatomy</a> et BodyParts3D, licence CC BY-SA 4.0. Contenu rédigé à partir d\'atlas de référence et de la littérature citée ; il ne remplace pas l\'avis d\'un professionnel de santé.</p></div>' +
+  return '<footer class="site-foot"><div class="wrap"><div><p><b style="color:var(--fg)">Anatomy</b> · anatomie fonctionnelle, biomécanique et entraînement.</p><p>Planches tracées d\'après <a href="https://github.com/Z-Anatomy/Models-of-human-anatomy" target="_blank" rel="noopener">Z-Anatomy</a> et BodyParts3D, licence CC BY-SA 4.0. Contenu rédigé à partir d\'atlas de référence et de la littérature citée ; il ne remplace pas l\'avis d\'un professionnel de santé.</p></div>' +
     '<div class="foot-links"><button type="button" class="linkish" data-nav="sources">Sources et méthode</button><button type="button" class="linkish" data-glossaire>Glossaire</button><button type="button" class="linkish" data-settings>Réglages et sauvegarde</button></div></div></footer>';
 }
 
@@ -11655,7 +11751,7 @@ function homeIntro(){
   var mark = $(".dock .brand-mark"); if (!mark) return;
   var short = INTRO.n++ > 0, el = document.createElement("div"), inner = document.createElement("div"), word = document.createElement("div");
   el.className = "intro" + (short ? " short" : ""); el.setAttribute("aria-hidden", "true");
-  inner.className = "intro-in"; word.className = "intro-word"; word.textContent = "Anatomie";
+  inner.className = "intro-in"; word.className = "intro-word"; word.textContent = "Anatomy";
   var m = mark.cloneNode(true); m.setAttribute("class", "brand-mark intro-mark");
   inner.appendChild(m); inner.appendChild(word); el.appendChild(inner); document.body.appendChild(el);
   INTRO.el = el;
@@ -14215,8 +14311,8 @@ C3.v = null;
 var C3_WEB = ["https://cdn.jsdelivr.net/gh/louishassan-gln/anatomie@main/3d/corps3d.bin", "https://raw.githubusercontent.com/louishassan-gln/anatomie/main/3d/corps3d.bin"];
 var C3_IDS = ",ancone,atlas_axis,bandelette_it,bf_court,bf_long,biceps_court,biceps_long,brachial,brachio_radial,calcaneus,carpe,clavicule,coracobrachial,cotes,court_adducteur,crane,delt_ant,delt_moy,delt_post,dentele_anterieur,diaphragme,disques,droit_abdomen,droit_femoral,elevateur_scapula,erecteurs,extenseur_doigts,extenseur_ulnaire_carpe,extenseurs_radiaux_carpe,femur,fibula,fibulaire_court,fibulaire_long,flechisseur_radial_carpe,flechisseur_ulnaire_carpe,flechisseurs_doigts,gastro_lat,gastro_med,gracile,grand_adducteur,grand_dorsal,grand_fessier,grand_rond,humerus,ilio_psoas,ilium,long_adducteur,metacarpe,metatarse,moyen_fessier,oblique_externe,patella,pec_abd,pec_clav,pec_stern,pectine,pelvi_trochanteriens,petit_fessier,petit_pectoral,petit_rond,phalanges_main,phalanges_pied,piriforme,poplite,radius,rhomboides,rond_pronateur,sacrum,sartorius,scapula,scm,semi_membraneux,semi_tendineux,soleaire,sous_epineux,sous_scapulaire,splenius,sternum,supinateur,sus_epineux,t_calcaneen,talus,tarse,tfl,tibia,tibial_anterieur,tibial_posterieur,trap_inf,trap_moyen,trap_sup,triceps_lat,triceps_long,triceps_med,ulna,vaste_intermediaire,vaste_lateral,vaste_medial,vert_cervicales,vert_lombaires,vert_thoraciques,";
 function c3Urls(){ var p = location.protocol; return (p === "file:" ? ["3d/corps3d.js"] : /^(data|about|blob):$/.test(p) ? [] : ["3d/corps3d.bin"]).concat(navigator.onLine === false ? [] : C3_WEB); }
-function c3Clair(){ var m = /(\d+)[, ]+(\d+)[, ]+(\d+)/.exec(getComputedStyle(document.body).backgroundColor || ""); return !!m && (+m[1] + +m[2] + +m[3]) > 380; }
-function c3Rendu(){ var r = P.prefs.rendu3d; return r === "pierre" || r === "epure" ? r : "ecorche"; }
+function c3Clair(){ return false; }
+function c3Rendu(){ var r = P.prefs.rendu3d; return r === "chair" || r === "epure" ? r : "irm"; }
 function c3Env(){
   return {
     T: T, esc: esc, en: EN, reduit: REDUCED || P.prefs.anim === false,
@@ -14262,7 +14358,7 @@ function c3Story(){
   var box = document.createElement("div"); box.className = "story-3d"; box.setAttribute("aria-hidden", "true"); host.parentNode.appendChild(box);
   var env = c3Env();
   env.nu = true; env.sansIntro = !!C3.recitVu; env.surEtat = null; env.imprimer = null;
-  env.etat = {c: 1, r: "", rendu: c3Rendu() === "epure" ? "ecorche" : c3Rendu(), lbl: false, pose: true};
+  env.etat = {c: 1, r: "", rendu: c3Rendu() === "epure" ? "irm" : c3Rendu(), lbl: false, pose: true};
   /* Le corps se place dans la partie libre de la scène : à droite du texte, ou au-dessus sur téléphone. */
   env.marges = function(w, h){
     var t = $(".story-txt > div.on") || $(".story-txt > div"), sr = host.getBoundingClientRect(), tr = t ? t.getBoundingClientRect() : null;
@@ -14270,7 +14366,12 @@ function c3Story(){
     if (tr.width < w * .62) return {l: Math.min(w * .55, tr.right - sr.left + 30), r: Math.max(24, w * .04), t: 34, b: 44};
     return {l: 12, r: 12, t: 20, b: Math.min(h * .55, Math.max(60, sr.bottom - tr.top + 12))};
   };
-  env.pret = function(v){ C3.recitVu = true; st.classList.add("en3d"); c3StoryGo(HOME.step < 0 ? 0 : HOME.step, true); };
+  env.pret = function(v){
+    C3.recitVu = true;
+    var stick = $(".story-stick", st);
+    if (stick && !$(".hero-titre", stick)){ var ht = document.createElement("div"); ht.className = "hero-titre"; ht.setAttribute("aria-hidden", "true"); ht.innerHTML = '<span class="net">Anatomy</span><span class="flou">Anatomy</span>'; stick.appendChild(ht); }
+    st.classList.add("en3d"); c3StoryGo(HOME.step < 0 ? 0 : HOME.step, true);
+  };
   C3.story = A.Vue3D.monter(box, env);
 }
 function c3StoryGo(i, net){
@@ -14312,7 +14413,7 @@ function c3Carte(){
     x.fillStyle = "#fff"; x.fillRect(0, 0, PW, PH);
     x.drawImage(img, M, top, fw, fh);
     /* En-tête */
-    x.fillStyle = "#e0261c"; x.font = "600 " + 30 * k + "px " + F; x.textBaseline = "alphabetic"; x.fillText(T("Anatomie") + " · " + T("Corps en 3D"), M, 118 * k);
+    x.fillStyle = "#1d1d1f"; x.font = "600 " + 30 * k + "px " + F; x.textBaseline = "alphabetic"; x.fillText("ANATOMY · " + T("Corps en 3D").toUpperCase(), M, 118 * k);
     x.fillStyle = "#1d1d1f"; x.font = "600 " + 92 * k + "px " + F; x.fillText(T(r.n), M, 222 * k);
     x.fillStyle = "#6e6e73"; x.font = "400 " + 36 * k + "px " + F; x.fillText("0" + st.c + " · " + T(V.COUCHES[st.c - 1][0]) + " · " + T(muette ? "Carte muette" : "Carte complète"), M, 284 * k);
     if (muette){ x.textAlign = "right"; x.fillText(T("Nom") + " : ____________________   " + T("Date") + " : __________", PW - M, 284 * k); x.textAlign = "left"; }
@@ -14326,7 +14427,7 @@ function c3Carte(){
       /* Numéro contre le trait, puis le nom ou la ligne à remplir */
       var tw = col - 60 * k, nx = l.g ? lx - 12 * k : lx + 12 * k, no = String(l.no);
       x.textBaseline = "middle"; x.font = "600 " + 26 * k + "px " + F; var nw = x.measureText(no).width + 14 * k;
-      x.textAlign = l.g ? "right" : "left"; x.fillStyle = "#e0261c"; x.fillText(no, nx, ly);
+      x.textAlign = l.g ? "right" : "left"; x.fillStyle = "#1d1d1f"; x.fillText(no, nx, ly);
       if (muette){
         x.strokeStyle = "#8e8e93"; x.lineWidth = 1.6 * k; x.beginPath();
         if (l.g){ x.moveTo(M + 10 * k, ly + 15 * k); x.lineTo(nx - nw, ly + 15 * k); } else { x.moveTo(nx + nw, ly + 15 * k); x.lineTo(PW - M - 10 * k, ly + 15 * k); }
@@ -14339,7 +14440,7 @@ function c3Carte(){
     });
     /* Pied : crédit du modèle */
     x.textBaseline = "alphabetic"; x.fillStyle = "#8e8e93"; x.font = "400 " + 24 * k + "px " + F;
-    x.fillText(T("Modèle 3D : BodyParts3D, © The Database Center for Life Science, licence CC BY 4.0. Planche : Anatomie."), M, PH - 96 * k);
+    x.fillText(T("Modèle 3D : BodyParts3D, © The Database Center for Life Science, licence CC BY 4.0. Planche : Anatomy."), M, PH - 96 * k);
     C3P.canvas = c; C3P.nom = "anatomie-" + (r.id || "corps") + "-" + C3P.type + ".png";
     var out;
     try { out = c.toDataURL("image/png"); } catch (e){ out = null; }
