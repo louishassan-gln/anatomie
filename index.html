@@ -1857,12 +1857,12 @@ input[type="search"],input[type="text"],input[type="number"],select,textarea{bor
 .story.dir .scroll-hint{bottom:calc(var(--bot) + 6px)}
 .story.dir .story-plate{bottom:calc(var(--bot) + 8px)}
 /* Planche III : texte foncé sur le papier. */
-.story.dir[data-s="2"] .story-txt, .story.dir[data-s="2"] .story-dots, .story.dir[data-s="2"] .scroll-hint{--fg:#111113; --fg-2:#3a3a3c; --fg-3:#6e6e73; --line-2:rgba(0,0,0,.14); --line-3:rgba(0,0,0,.32)}
-.story.dir[data-s="2"] .story-txt{color:#111113}
-.story.dir[data-s="2"] .story-txt h2{color:#111113}
-.story.dir[data-s="2"] .story-txt p{color:#3a3a3c}
-.story.dir[data-s="2"] .story-txt > div::before{-webkit-text-stroke-color:rgba(0,0,0,.34)}
-.story.dir[data-s="2"] .story-txt .link{color:#111113}
+.story.dir.clair .story-txt, .story.dir.clair .story-dots, .story.dir.clair .scroll-hint{--fg:#111113; --fg-2:#3a3a3c; --fg-3:#6e6e73; --line-2:rgba(0,0,0,.14); --line-3:rgba(0,0,0,.32)}
+.story.dir.clair .story-txt{color:#111113}
+.story.dir.clair .story-txt h2{color:#111113}
+.story.dir.clair .story-txt p{color:#3a3a3c}
+.story.dir.clair .story-txt > div::before{-webkit-text-stroke-color:rgba(0,0,0,.34)}
+.story.dir.clair .story-txt .link{color:#111113}
 /* Chaque planche est un plan opaque, posé au-dessus du corps 3D. */
 .story.dir .story-map{z-index:2; background:transparent; will-change:transform, opacity}
 /* II : bichromie rouge et noir. La planche garde son dessin, ses couleurs passent au bordeaux (ombres), à l'écarlate
@@ -1914,7 +1914,7 @@ input[type="search"],input[type="text"],input[type="number"],select,textarea{bor
   .story.dir .story-txt > div[data-s="2"] p{font-size:15px}
   .story.dir .story-txt > div[data-s="2"] h2{font-size:clamp(30px, 9vw, 40px)}
   .story.dir .story-txt > div[data-s="2"]::before{font-size:40px; margin-bottom:6px}
-  .story.dir[data-s="2"] .story-txt::before{opacity:0}
+  .story.dir.clair .story-txt::before{opacity:0}
   .story.dir .story-txt::before{transition:opacity .6s}
 }
 
@@ -2015,7 +2015,7 @@ input[type="search"],input[type="text"],input[type="number"],select,textarea{bor
 @media (max-width: 760px){ .story-fond .f-duo{background:radial-gradient(ellipse 95% 60% at 60% 22%, #e8131c 0%, #c4101a 24%, #74070f 52%, #1e0205 80%, #000 100%)} }
 .story-lum{position:absolute; inset:0; z-index:5; pointer-events:none; opacity:0; background:radial-gradient(ellipse 26% 36% at 66% 26%, rgba(255,252,244,.55), rgba(255,252,244,0) 74%), linear-gradient(126deg, rgba(0,0,0,0) 36%, rgba(22,16,10,.42) 100%), radial-gradient(ellipse 80% 90% at 60% 30%, rgba(40,32,24,0) 46%, rgba(40,32,24,.28) 100%)}
 /* La planche suit ses variables de couleur ; le reflet du muscle reste neutre quand la planche est grise. */
-.story.dir .story-map .atlas-svg .core.c-muscle{fill:hsl(var(--mh), calc(var(--ms) * 1.07), calc(var(--ml) + 11% + var(--dl, 0%)))}
+.story.dir .story-map .atlas-svg:not(.pal-g) .core.c-muscle{fill:hsl(var(--mh), calc(var(--ms) * 1.07), calc(var(--ml) + 11% + var(--dl, 0%)))}
 /* Chapitres 04 à 06 : planche agrandie, qui s'efface en dégradé avant le texte. */
 @media (min-width: 761px){
   .story.dir[data-s="3"] #story-map .atlas-svg, .story.dir[data-s="4"] #story-map .atlas-svg, .story.dir[data-s="5"] #story-map .atlas-svg{-webkit-mask-image:linear-gradient(to right, transparent var(--fx0, 0px), #000 var(--fx1, 0px)); mask-image:linear-gradient(to right, transparent var(--fx0, 0px), #000 var(--fx1, 0px))}
@@ -2024,6 +2024,18 @@ input[type="search"],input[type="text"],input[type="number"],select,textarea{bor
 .story-lum{z-index:3}
 .story.dir .story-map.sc-pap{--fg:#111113; --fg-2:#3a3a3c; --fg-3:#6e6e73; --bg:#ebe8e1; --lbl-halo:#ebe8e1}
 .story.dir .story-map.sc-duo{--bg:#3e050a; --lbl-halo:#3e050a}
+
+/* ---------- Version 11 ---------- */
+.story.dir .story-txt h2,.story.dir .story-txt p,.story.dir .story-txt .link{transition:color .35s ease}
+/* Disparition des muscles avant la planche suivante. */
+.atlas-svg.pop-out .regions .r,.atlas-svg.pop-out .cores .core{animation:popOut .3s cubic-bezier(.5,0,.75,0) both; animation-delay:var(--pd, 0s); transform-box:fill-box; transform-origin:50% 50%}
+@keyframes popOut{to{opacity:0; transform:scale(.86)}}
+/* Petit message du corps 3D, sans bouton (pièce sans fiche). */
+.c3-msg:not(:has(.c3-msg-b)){padding:9px 16px}
+/* Page 1 : tant que le corps 3D charge, l'écran reste noir (jamais la planche 2D à sa place). */
+.story.dir.a3d:not(.a3d-ok)[data-s="0"] .story-map{opacity:0 !important}
+.story-haut{display:none; position:absolute; left:0; right:0; top:0; height:42%; z-index:4; pointer-events:none; opacity:0; background:linear-gradient(to bottom, #ebe8e1 58%, rgba(235,232,225,0))}
+@media (max-width: 760px){ .story-haut{display:block} }
 </style>
 <svg class="defs" aria-hidden="true" focusable="false">
   <defs>
@@ -10615,7 +10627,7 @@ function monter(host, env){
   }
   /* Petit message, quand la vue a changé : le nom du muscle et l'accès à sa fiche, sans rien cacher. */
   function montrerMsg(e){
-    elMsg.innerHTML = '<span class="c3-msg-n">' + esc(nomCourt(e)) + '</span><button type="button" class="c3-msg-b" data-fiche="' + esc(e.a) + '">' + esc(T("Ouvrir la fiche")) + "</button>";
+    elMsg.innerHTML = '<span class="c3-msg-n">' + esc(nomCourt(e)) + "</span>" + (e.a && env.fiche ? '<button type="button" class="c3-msg-b" data-fiche="' + esc(e.a) + '">' + esc(T("Ouvrir la fiche")) + "</button>" : "");
     elMsg.hidden = false;
   }
   function cacherMsg(){ elMsg.hidden = true; }
@@ -10629,13 +10641,12 @@ function monter(host, env){
     var meme = e.a ? function(x){ return x.a === e.a; } : function(x, i){ return i === k; };
     /* Le muscle est mis en évidence, le reste garde ses couleurs. */
     eng.selection(meme, false);
-    /* Une structure qui a sa fiche : si la vue a changé, un petit message propose la fiche ; sinon (le muscle était
-       déjà sous les yeux), la fiche s'ouvre aussitôt et un autre muscle la remplace. Les autres pièces gardent le
-       petit panneau. */
-    if (e.a && env.fiche && !env.nu){
+    /* La fiche ne s'ouvre jamais sans accord : un petit message (nom, « Ouvrir la fiche ») la propose. Si une fiche est
+       déjà ouverte (acceptée), celle du nouveau muscle la remplace. Une pièce sans fiche : son nom seul. */
+    if (!env.nu){
       if (!elFiche.hidden) elFiche.hidden = true;
-      if (bouge){ if (env.fermer) env.fermer(); montrerMsg(e); legendes(); return; }
-      cacherMsg(); env.fiche(e.a); legendes(); return;
+      if (e.a && env.fiche && env.ficheOuverte && env.ficheOuverte()){ cacherMsg(); env.fiche(e.a); legendes(); return; }
+      montrerMsg(e); legendes(); return;
     }
     cacherMsg();
     var o = e.a ? env.nom(e.a) : null, cats = ["Peau", "Muscle", "Tissu conjonctif", "Cartilage", "Os"];
@@ -10769,7 +10780,7 @@ function monter(host, env){
       var p0 = ptr[e.pointerId]; ptr[e.pointerId] = {x: e.clientX, y: e.clientY};
       /* Deux doigts : pincer rapproche, glisser ensemble vers le haut ou le bas incline la vue. */
       if (np === 2){ var p = Object.keys(ptr).map(function(k){ return ptr[k]; }), d = Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y), m2 = (p[0].y + p[1].y) / 2; if (pinch > 0 && d > 0) eng.zoomer(pinch / d, .2, 9); pinch = d; rp += (m2 - my2) * .004; my2 = m2; regarder(); legendes(false); return; }
-      if (!glisse && Math.hypot(e.clientX - x0, e.clientY - y0) > 6){ glisse = true; legendes(false); root.classList.add("c3-glisse"); }
+      if (!glisse && Math.hypot(e.clientX - x0, e.clientY - y0) > (e.pointerType === "touch" ? 12 : 6)){ glisse = true; legendes(false); root.classList.add("c3-glisse"); }
       if (glisse && !bascule){
         ry -= (e.clientX - p0.x) * .006; if (e.pointerType === "mouse") rp += (e.clientY - p0.y) * .005;
         regarder();
@@ -10793,8 +10804,17 @@ function monter(host, env){
     else if (eng){ eng.etat.vyaw = 0; legendes(); }
     glisse = false;
   }
-  /* Geste repris par la page (défilement au doigt) : rien n'est désigné. */
-  function annule(e){ if (!ptr[e.pointerId]) return; delete ptr[e.pointerId]; np = Object.keys(ptr).length; root.classList.remove("c3-glisse"); if (!np){ glisse = false; legendes(); } }
+  /* Geste repris par la page (le navigateur a cru à un défilement) : si le doigt n'a presque pas bougé et s'est levé
+     vite, c'était un toucher ; on le désigne au lever du doigt. */
+  var tap = null;
+  function annule(e){ if (!ptr[e.pointerId]) return; delete ptr[e.pointerId]; np = Object.keys(ptr).length; root.classList.remove("c3-glisse"); if (!np){ if (!glisse && e.pointerType === "touch") tap = {t: Date.now()}; glisse = false; legendes(); } }
+  cv.addEventListener("touchstart", function(e){ tap = null; if (e.touches.length === 1) cv._t0 = {x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now()}; }, {passive: true});
+  cv.addEventListener("touchend", function(e){
+    var t0 = cv._t0, c = e.changedTouches[0]; if (!tap || !t0 || !c || !eng) { tap = null; return; }
+    tap = null;
+    if (Math.hypot(c.clientX - t0.x, c.clientY - t0.y) > 12 || Date.now() - t0.t > 600) return;
+    var r = cv.getBoundingClientRect(), k = eng.viser(c.clientX - r.left, c.clientY - r.top); choisir(k, eng.normaleVisee());
+  }, {passive: true});
   cv.addEventListener("pointerup", fin); cv.addEventListener("pointercancel", annule);
   cv.addEventListener("pointerleave", function(){ clearTimeout(survolT); elBulle.hidden = true; });
   /* Molette : la page défile ; avec Ctrl (ou le pincement du pavé tactile), le corps se rapproche. */
@@ -12289,11 +12309,12 @@ function storyGo(i, first){
   var pose = function(){ m.svg.classList.toggle("pal-g", !!s.pal); if (m.view() !== s.v) m.setView(s.v); if (m.depth() !== s.d) m.setDepth(s.d); };
   /* Accueil continu : jusqu'au chapitre 04, le défilement pilote la planche (storyScrub) ; ensuite, recadrage. */
   var dir = !!$("#story.dir"), pousse = false;
-  if (!dir || i >= 3) pose();
+  if (!dir) pose();
   $$(".story-txt > div").forEach(function(d){ var k = +d.dataset.s; d.classList.toggle("on", k === i); d.classList.toggle("gone", k < i); if (k === i) d.removeAttribute("aria-hidden"); else d.setAttribute("aria-hidden", "true"); });
   $$(".story-dots button").forEach(function(b){ b.classList.toggle("on", +b.dataset.sd === i); });
   $("#story").classList.toggle("past", i > 0);
-  if (dir){ if (i >= 3) storyFrame(!first && prev >= 3); if (typeof storyScrub === "function") storyScrub(); }
+  /* 04 → 05 → 06 : les muscles disparaissent puis réapparaissent ; l'arrivée en 04 est posée par storyScrub. */
+  if (dir){ if (i >= 3 && prev >= 3 && !first && SC.fin) storyPop(i, pose); if (typeof storyScrub === "function") storyScrub(); }
   else storyFrame(!first && prev >= 0 && !(prev === 0 && a3d));
   c3AccueilGo(i);
 }
@@ -14977,6 +14998,7 @@ function c3Env(){
     nom: function(id){ var s = S[id]; return s ? {fr: s.o.fr, la: s.o.la} : null; },
     fiche: function(id){ openSheet(id, {reset: true}); },
     fermer: function(){ closeSheet(); },
+    ficheOuverte: function(){ var sh = $("#sheet"); return !!(sh && !sh.hidden && SH.cur && S[SH.cur.id]); },
     /* Couleur d'un muscle par groupe, la même que sur la carte 2D (palette « Groupes »). */
     groupe: function(id){ return A.Map.GPAL[A.Map.GKEY[id]] || null; },
     change: function(){ clearTimeout(C3B.t); C3B.t = setTimeout(function(){ if (curView === "corps" && C3B.mode === "explorer") c3Ctx(false); }, 160); },
@@ -15085,6 +15107,8 @@ function c3Accueil(){
   env.erreur = function(){ st.classList.remove("a3d"); };
   C3.story = A.Vue3D.monter(box, env);
   var vo = document.createElement("i"); vo.className = "story-voile"; box.appendChild(vo);
+  /* La 3D arrive : l'écran reste noir (pas de planche) le temps qu'elle charge. */
+  SC.cam = null; if (typeof storyScrub === "function"){ storyScrub(); setTimeout(storyScrub, 0); }
   var io = new IntersectionObserver(function(en){ if (C3.story){ SC.pause = !en[0].isIntersecting || curView !== "accueil" || SC.P > 1.02; C3.story.suspendre(SC.pause); } }, {threshold: 0});
   io.observe(stick);
 }
@@ -15154,7 +15178,7 @@ function storyPousse(i, prev, pose, a3d){
             et la planche grise ;
    03 → 04  le dos gris s'efface, le papier s'éteint, la planche suivante apparaît.
    Ensuite (04 à 06), le recadrage habituel. Les couleurs de la planche sont ses variables CSS, interpolées. */
-var SC = {cle: "", P: -1, vb: null, cam: null, vbCur: "", lblK: -2, pause: false};
+var SC = {cle: "", P: -1, vb: null, cam: null, vbCur: "", lblK: -2, pause: false, fin: false};
 var PAL_V = ["mh", "ms", "ml", "bone", "bone-hi", "tendon", "tw", "lig", "cart", "fascia", "nerf", "st-skin", "neutre", "ink"];
 var PALS = {
   normal: [3, 66, 40, "#e8dcc3", "#f7efdf", "#efe5cf", "#ece2cc", "#7fb4ea", "#b9a7e6", "#98a2ae", "#f5cd4f", "#2c2c31", "#2b2225", "#0c0909"],
@@ -15177,6 +15201,8 @@ function scPrep(){
   if (SC.cle === cle && SC.vb) return true;
   SC.cle = cle; SC.vb = []; SC.reg = []; SC.area = []; SC.cam = null; SC.vbCur = ""; SC.lblK = -1;
   for (var k = 0; k < 4; k++){ var a = scArea(k), f = storyVB(STORY[k], a); SC.vb.push(f.vb); SC.reg.push(f.reg); SC.area.push(a); }
+  /* Milieu du passage 02 → 03 : le corps entier, à la place de la planche 02. */
+  SC.vbMid = storyVB(STORY[0], SC.area[1]).vb;
   return true;
 }
 /* Les deux extrémités du mouvement 3D : la statue de dos, et le corps de face placé exactement sur la planche de
@@ -15206,29 +15232,40 @@ function scFond(){
   var stick = $(".story-stick"), sm = $("#story-map") && $("#story-map").parentNode; if (!stick || !sm) return;
   if (!$(".story-fond", stick)){ var f = document.createElement("div"); f.className = "story-fond"; f.setAttribute("aria-hidden", "true"); f.innerHTML = '<i class="f-duo"></i><i class="f-pap"></i>'; stick.insertBefore(f, stick.firstChild); }
   if (!$(".story-lum", stick)){ var l = document.createElement("i"); l.className = "story-lum"; l.setAttribute("aria-hidden", "true"); stick.insertBefore(l, sm.nextSibling);
-    var fz = document.createElement("i"); fz.className = "story-fade2"; fz.setAttribute("aria-hidden", "true"); stick.insertBefore(fz, l.nextSibling); }
+    var fz = document.createElement("i"); fz.className = "story-fade2"; fz.setAttribute("aria-hidden", "true"); stick.insertBefore(fz, l.nextSibling);
+    /* Téléphone : un voile couleur papier sous le texte du haut, pour qu'il reste lisible quand le corps passe dessous. */
+    var hz = document.createElement("i"); hz.className = "story-haut"; hz.setAttribute("aria-hidden", "true"); stick.insertBefore(hz, fz.nextSibling); }
 }
 function storyScrub(){
   var st = $("#story.dir"); if (!st || !HOME.map || curView !== "accueil") return;
   var g = storyGeom(); if (!g || !scPrep()) return;
   scFond();
-  var P = Math.max(0, Math.min(g.n - 1, (window.scrollY - g.top) / g.h)); if (REDUCED) P = Math.round(P);
+  var Pr = Math.max(0, Math.min(g.n - 1, (window.scrollY - g.top) / g.h));
+  /* Paliers : au début et à la fin de chaque chapitre, la scène reste posée un moment malgré le défilement. */
+  var k0 = Math.floor(Pr), f0 = Pr - k0, HOLD = .17, P = k0 + Math.max(0, Math.min(1, (f0 - HOLD) / (1 - 2 * HOLD)));
+  if (REDUCED) P = Math.round(Pr);
   var cl = function(x){ return x < 0 ? 0 : x > 1 ? 1 : x; }, ea = function(x){ x = cl(x); return x * x * (3 - 2 * x); };
   var m = HOME.map, host = $("#story-map"), sm = host.parentNode, d3 = $(".story-3d"), fd = $(".story-fond .f-duo"), fp = $(".story-fond .f-pap"), stick = $(".story-stick"), lum = $(".story-lum", stick), fad = $(".story-fade2", stick);
   var a3d = st.classList.contains("a3d-ok") && C3.story && C3.story.eng;
   SC.P = P;
   if (C3.story){ var off = P > 1.02; if (off !== SC.pause){ SC.pause = off; C3.story.suspendre(off); } }
+  st.classList.remove("clair");
   if (P > .05) m.svg.classList.remove("pop-in");
   var o = 1, rot = 0, sca = 1, view = "face", depth = "sup", vb = null, pa = null, pb = null, pt = 0, duo = 0, pap = 0, fade = 0, sansPlanche = false;
   if (P >= 3){
     /* 04 à 06 : la planche en couleurs, au recadrage habituel. */
     if (d3){ d3.style.opacity = "0"; d3.style.visibility = "hidden"; }
+    var hz4 = $(".story-haut", stick); if (hz4) hz4.style.opacity = "0";
     sm.style.opacity = ""; sm.style.transform = ""; scPal(sm, null); fd.style.opacity = "0"; fp.style.opacity = "0"; lum.style.opacity = "0"; fad.style.opacity = "0";
     stick.style.setProperty("--bg", "#000"); SC.vbCur = "";
-    /* Arrivée en 04 d'un grand saut : les légendes du chapitre affiché. */
-    if (SC.lblK !== HOME.step && HOME.step >= 3){ SC.lblK = HOME.step; var a4 = storyArea(); storyLabels(STORY[HOME.step], a4, storyVB(STORY[HOME.step], a4).reg); HOME.lbl.hide(false); }
+    if (!SC.fin && HOME.step >= 3){
+      SC.fin = true; var s4 = STORY[HOME.step];
+      m.svg.classList.toggle("pal-g", !!s4.pal); if (m.view() !== s4.v) m.setView(s4.v); if (m.depth() !== s4.d) m.setDepth(s4.d);
+      storyFrame(false); SC.lblK = HOME.step;
+    }
     return;
   }
+  SC.fin = false;
   if (P < 1){
     if (a3d){
       var x3 = cl((P - .62) / .16);
@@ -15241,16 +15278,17 @@ function storyScrub(){
     }
   } else if (P < 2){
     if (d3){ d3.style.opacity = "0"; d3.style.visibility = "hidden"; }
-    var t = ea(P - 1), an = t * 180;
-    vb = scLerp(SC.vb[1], SC.vb[2], t);
-    if (an < 90){ rot = an; } else { view = "dos"; rot = an - 180; }
-    var tc = ea((t - .38) / .24); pa = "duo"; pb = "papier"; pt = tc; duo = 1 - tc; pap = tc; fade = ea((t - .5) / .5);
+    var t = P - 1;
+    if (t < .5) vb = scLerp(SC.vb[1], SC.vbMid, ea(t / .5));
+    else { view = "dos"; vb = scLerp(SC.vbMid, SC.vb[2], ea((t - .5) / .5)); }
+    var tc = ea((t - .3) / .4); pa = "duo"; pb = "papier"; pt = tc; duo = 1 - tc; pap = tc; fade = ea((t - .55) / .45);
   } else {
     if (d3){ d3.style.opacity = "0"; d3.style.visibility = "hidden"; }
     var t2 = P - 2;
-    if (t2 < .5){ var u = ea(t2 / .42); view = "dos"; vb = SC.vb[2]; o = 1 - u; sca = 1 - .05 * u; pa = "papier"; fade = 1 - u; }
-    else { var u2 = ea((t2 - .55) / .4); view = STORY[3].v; depth = STORY[3].d; vb = SC.vb[3]; o = u2; sca = 1.05 - .05 * u2; }
-    pap = 1 - ea((t2 - .1) / .5);
+    /* Le dos gris s'efface pendant que le papier s'éteint ; puis la planche 04 apparaît sur le noir. */
+    if (t2 < .5){ var u = ea(t2 / .45); view = "dos"; vb = SC.vb[2]; o = 1 - u; sca = 1 - .05 * u; pa = "papier"; fade = 1 - u; }
+    else { var u2 = ea((t2 - .52) / .42); view = STORY[3].v; depth = STORY[3].d; vb = SC.vb[3]; o = u2; sca = 1.05 - .05 * u2; }
+    pap = 1 - ea(t2 / .45);
   }
   if (m.view() !== view) m.setView(view);
   if (m.depth() !== depth) m.setDepth(depth);
@@ -15263,12 +15301,31 @@ function storyScrub(){
   sm.style.opacity = sansPlanche ? "0" : o.toFixed(3);
   scPal(sm, pa, pb, pt);
   sm.classList.toggle("sc-pap", pap > .5); sm.classList.toggle("sc-duo", pap <= .5 && duo > .5);
+  st.classList.toggle("clair", pap > .5);
+  var hz = $(".story-haut", stick); if (hz) hz.style.opacity = pap.toFixed(3);
   fd.style.opacity = duo.toFixed(3); fp.style.opacity = pap.toFixed(3); lum.style.opacity = (pap * o).toFixed(3); fad.style.opacity = (fade * (pap > .5 ? 1 : pap * 2)).toFixed(3);
   stick.style.setProperty("--bg", pap > 0 ? scHex("#3e050a", "#ebe8e1", pap) : scHex("#000000", "#3e050a", duo));
   /* Légendes : seulement quand une planche est posée (à moins de 7 % d'un chapitre), celles de ce chapitre. */
   var kN = Math.round(P), pose = Math.abs(P - kN) < .07 && o > .95 && !rot && !(kN === 0 && a3d);
   if (pose && kN !== SC.lblK){ SC.lblK = kN; storyLabels(STORY[kN], SC.area[kN], SC.reg[kN]); HOME.lbl.hide(false); }
   else if (!pose){ SC.lblK = -1; HOME.lbl.hide(true); }
+}
+/* Chapitres 04 à 06 : les muscles de la planche disparaissent (du haut vers le bas, vite), puis ceux de la planche
+   suivante apparaissent l'un après l'autre, comme à l'ouverture de la carte. */
+function popDelais(svg, k){
+  $$(".regions .r, .cores .core", svg).forEach(function(p){ var bb = (p.getAttribute("d") || "").match(/^M[\d.]+ ([\d.]+)/), y = bb ? +bb[1] : 0; p.style.setProperty("--pd", (y / 900 * k).toFixed(2) + "s"); });
+}
+function storyPop(i, pose){
+  var m = HOME.map, svg = m && m.svg; if (!svg) return;
+  clearTimeout(HOME.popT); clearTimeout(HOME.lblT); HOME.lbl.hide(true);
+  if (REDUCED){ pose(); storyFrame(false); return; }
+  popDelais(svg, .15); svg.classList.remove("pop-in"); void svg.getBoundingClientRect(); svg.classList.add("pop-out");
+  HOME.popT = setTimeout(function(){
+    if (HOME.step !== i) return;
+    svg.classList.remove("pop-out"); pose(); storyFrame(false); HOME.lbl.hide(true);
+    popDelais(svg, .55); void svg.getBoundingClientRect(); svg.classList.add("pop-in");
+    HOME.lblT = setTimeout(function(){ if (HOME.step === i) HOME.lbl.hide(false); }, 850);
+  }, 430);
 }
 /* ---------- Cartes à imprimer : complète (légendée) ou muette (à remplir) ---------- */
 var C3P = {type: "complete", url: null};
