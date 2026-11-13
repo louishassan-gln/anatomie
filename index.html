@@ -1720,7 +1720,6 @@ body.pod-on .brand{display:none}
 .c3p-prev img{display:block; width:100%; height:auto; -webkit-touch-callout:default}
 .c3p-prev p{padding:28px; margin:0; color:#6e6e73}
 #c3-print{display:none}
-html:has(body[data-view="corps"]){overflow:hidden}
 body[data-view="corps"] #main{padding:0}
 @media print{
   body.c3-printing > *:not(#c3-print){display:none!important}
@@ -1865,7 +1864,7 @@ input[type="search"],input[type="text"],input[type="number"],select,textarea{bor
 .story.dir[data-s="2"] .story-txt > div::before{-webkit-text-stroke-color:rgba(0,0,0,.34)}
 .story.dir[data-s="2"] .story-txt .link{color:#111113}
 /* Chaque planche est un plan opaque, posé au-dessus du corps 3D. */
-.story.dir .story-map{z-index:1; background:#000}
+.story.dir .story-map{z-index:2; background:transparent; will-change:transform, opacity}
 /* II : bichromie rouge et noir. La planche garde son dessin, ses couleurs passent au bordeaux (ombres), à l'écarlate
    (os, tendons) et au noir (contours). */
 .story.dir .story-map.duo{background:radial-gradient(ellipse 60% 80% at 74% 28%, #e8131c 0%, #c4101a 24%, #74070f 52%, #1e0205 80%, #000 100%);
@@ -1879,7 +1878,7 @@ input[type="search"],input[type="text"],input[type="number"],select,textarea{bor
   --dim-m:#9a9894; --dim-h:#b0aeaa; --bg:#ebe8e1; --fg:#111113; --fg-2:#3a3a3c; --fg-3:#6e6e73; --line-2:rgba(0,0,0,.14); --line-3:rgba(0,0,0,.32)}
 .story.dir .story-map.papier::after{content:""; position:absolute; inset:0; z-index:5; pointer-events:none;
   background:radial-gradient(ellipse 26% 36% at 66% 26%, rgba(255,252,244,.55), rgba(255,252,244,0) 74%), linear-gradient(126deg, rgba(0,0,0,0) 36%, rgba(22,16,10,.42) 100%), radial-gradient(ellipse 80% 90% at 60% 30%, rgba(40,32,24,0) 46%, rgba(40,32,24,.28) 100%)}
-.story-fade{position:absolute; left:0; right:0; bottom:0; height:30%; z-index:3; pointer-events:none; display:none; background:linear-gradient(to bottom, rgba(235,232,225,0), #ebe8e1 78%)}
+.story-fade{position:absolute; left:0; right:0; bottom:0; height:30%; z-index:3; pointer-events:none; opacity:0; background:linear-gradient(to bottom, rgba(235,232,225,0), #ebe8e1 78%)}
 .story-map.papier .story-fade{display:block}
 .story.dir .story-map.papier .atlas-svg .core.c-muscle{fill:hsl(0, 0%, calc(var(--ml) + 11% + var(--dl, 0%)))}
 /* Passage : la nouvelle scène recouvre l'ancienne, qui recule et s'éteint. */
@@ -1887,12 +1886,9 @@ input[type="search"],input[type="text"],input[type="number"],select,textarea{bor
 .story-ghost *{animation:none !important}
 .story-voile{position:absolute; inset:0; z-index:9; background:#000; opacity:0; pointer-events:none}
 /* Corps 3D de l'ouverture, sous les planches. */
-.story-3d{position:absolute; inset:0; z-index:0; pointer-events:none; background:#000}
+.story-3d{position:absolute; inset:0; z-index:1; pointer-events:none; background:#000}
 .c3-nu .c3-tl,.c3-nu .c3-prof{display:none!important}
 @media (min-width: 761px){ .story-3d .c3-cv{-webkit-mask-image:linear-gradient(to bottom, #000 70%, transparent 99%); mask-image:linear-gradient(to bottom, #000 70%, transparent 99%)} }
-.story.dir.a3d .story-3d{visibility:hidden; transition:visibility 0s 1.15s}
-.story.dir.a3d[data-s="0"] .story-3d{visibility:visible; transition:none}
-.story.dir.a3d[data-s="0"] .story-map{transform:translateY(100%)}
 .story.dir:not(.a3d) .story-3d{display:none}
 /* Texte : chaque élément monte de derrière une ligne invisible, l'un après l'autre, comme un générique. */
 .story.dir .story-txt > div > *{transition:transform 1s cubic-bezier(.16,1,.3,1), clip-path 1s cubic-bezier(.16,1,.3,1)}
@@ -1968,7 +1964,8 @@ input[type="search"],input[type="text"],input[type="number"],select,textarea{bor
 .c3-liste .chips,.c3-roles .chips{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px}
 .c3-roles .role-blk{margin-top:14px}
 .c3-bas .chip .sw,.c3-leg .sw{display:inline-block; width:9px; height:9px; border-radius:3px; margin-right:7px; flex:none}
-.c3-leg{display:flex; flex-wrap:wrap; gap:8px 18px; margin-top:20px; font-size:13px; color:var(--fg-2)}
+.c3-leg{margin-top:22px}
+.c3-leg-l{display:flex; flex-wrap:wrap; gap:8px 18px; margin-top:10px; font-size:13.5px; color:var(--fg-2)}
 .c3-leg span{display:inline-flex; align-items:center}
 .c3-ex{display:flex; gap:14px; align-items:center; margin-bottom:6px}
 .c3-ex .fig-host{width:92px; flex:none}
@@ -1981,6 +1978,52 @@ input[type="search"],input[type="text"],input[type="number"],select,textarea{bor
   .c3-bas{padding:0 16px calc(var(--bot, 80px) + 24px)}
   .c3-modes{gap:24px}
 }
+
+/* ---------- Version 10 : vues repliées, sélecteur étroit, zoom, message ---------- */
+/* Face / Profil / Dos : seule la vue active est montrée ; la toucher déplie les deux autres. */
+.c3-vue button{max-width:110px; overflow:hidden; transition:max-width .4s var(--ease), padding .4s var(--ease), opacity .25s, background .3s, color .2s}
+.c3-vue.repli button:not([aria-pressed="true"]){max-width:0; padding-left:0; padding-right:0; opacity:0; pointer-events:none}
+.c3-vue.repli{gap:0}
+.c3-vue.repli button[aria-pressed="true"]::after{content:""; display:inline-block; width:6px; height:6px; margin:-4px 0 0 9px; border-right:1.7px solid currentColor; border-bottom:1.7px solid currentColor; transform:rotate(45deg); opacity:.55}
+/* Sélecteur de profondeur : l'icône seule, centrée ; le nom passe dans une bulle au changement et dans la liste. */
+.prof{width:58px; padding:3px}
+.prof-w{height:50px; padding:0; justify-content:center}
+.prof-in{flex:none; justify-content:center} .prof-t,.prof-dots{display:none}
+.prof-bulle{display:block; position:absolute; left:calc(100% + 8px); top:50%; transform:translate(-6px, -50%); white-space:nowrap; padding:7px 11px; border-radius:11px; background:rgba(28,28,30,.94); color:var(--fg); font-size:13px; font-weight:600; opacity:0; pointer-events:none; transition:opacity .25s, transform .35s var(--spring)}
+.prof.bulle-on .prof-bulle{opacity:1; transform:translate(0, -50%)}
+/* Zoom, comme sur la carte 2D. */
+.c3-zoom{position:absolute; z-index:5; right:16px; bottom:16px; display:flex; flex-direction:column; gap:2px; padding:4px; border-radius:16px; background:rgba(28,28,30,.88); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px)}
+.c3-zoom button{width:38px; height:38px; display:grid; place-items:center; border:0; border-radius:12px; background:none; color:var(--fg); cursor:pointer}
+.c3-zoom button:hover{background:rgba(255,255,255,.08)} .c3-zoom svg{width:18px; height:18px}
+/* Petit message quand la vue s'est placée sur un muscle : son nom et l'accès à la fiche, sans rien cacher. */
+.c3-msg{position:absolute; z-index:6; left:50%; bottom:18px; transform:translateX(-50%); display:flex; align-items:center; gap:12px; max-width:calc(100% - 120px); padding:6px 6px 6px 16px; border-radius:999px; background:rgba(22,22,24,.92); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); box-shadow:0 10px 30px rgba(0,0,0,.4); animation:popIn .4s var(--spring) both}
+.c3-msg[hidden]{display:none}
+.c3-msg-n{font-size:14px; font-weight:650; color:var(--fg); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.c3-msg-b{flex:none; min-height:34px; padding:0 14px; border:0; border-radius:999px; background:var(--btn); color:var(--btn-ink); font-size:13.5px; font-weight:650; cursor:pointer}
+/* Au doigt, un glissé vertical fait défiler la page (vers la rubrique) ; on tourne au glissé horizontal. */
+@media (pointer: coarse){ .c3:not(.c3-nu) .c3-cv{touch-action:pan-y} }
+.c3:not(.c3-nu){touch-action:pan-y}
+@media (max-width: 759px){ .c3-zoom{right:10px; bottom:12px} .c3-msg{bottom:12px; max-width:calc(100% - 84px)} }
+
+/* ---------- Version 10 : accueil continu ---------- */
+/* Fonds pilotés par le défilement : rouge écarlate qui se perd dans le noir, puis papier ; lumière de studio sur le
+   papier, au-dessus de la planche. */
+.story-fond{position:absolute; inset:0; z-index:0; pointer-events:none}
+.story-fond i{position:absolute; inset:0; opacity:0}
+.story-fond .f-duo{background:radial-gradient(ellipse 60% 80% at 74% 28%, #e8131c 0%, #c4101a 24%, #74070f 52%, #1e0205 80%, #000 100%)}
+.story-fond .f-pap{background:#ebe8e1}
+@media (max-width: 760px){ .story-fond .f-duo{background:radial-gradient(ellipse 95% 60% at 60% 22%, #e8131c 0%, #c4101a 24%, #74070f 52%, #1e0205 80%, #000 100%)} }
+.story-lum{position:absolute; inset:0; z-index:5; pointer-events:none; opacity:0; background:radial-gradient(ellipse 26% 36% at 66% 26%, rgba(255,252,244,.55), rgba(255,252,244,0) 74%), linear-gradient(126deg, rgba(0,0,0,0) 36%, rgba(22,16,10,.42) 100%), radial-gradient(ellipse 80% 90% at 60% 30%, rgba(40,32,24,0) 46%, rgba(40,32,24,.28) 100%)}
+/* La planche suit ses variables de couleur ; le reflet du muscle reste neutre quand la planche est grise. */
+.story.dir .story-map .atlas-svg .core.c-muscle{fill:hsl(var(--mh), calc(var(--ms) * 1.07), calc(var(--ml) + 11% + var(--dl, 0%)))}
+/* Chapitres 04 à 06 : planche agrandie, qui s'efface en dégradé avant le texte. */
+@media (min-width: 761px){
+  .story.dir[data-s="3"] #story-map .atlas-svg, .story.dir[data-s="4"] #story-map .atlas-svg, .story.dir[data-s="5"] #story-map .atlas-svg{-webkit-mask-image:linear-gradient(to right, transparent var(--fx0, 0px), #000 var(--fx1, 0px)); mask-image:linear-gradient(to right, transparent var(--fx0, 0px), #000 var(--fx1, 0px))}
+}
+.story-fade2{position:absolute; left:0; right:0; bottom:0; height:30%; z-index:3; pointer-events:none; opacity:0; background:linear-gradient(to bottom, rgba(235,232,225,0), #ebe8e1 78%)}
+.story-lum{z-index:3}
+.story.dir .story-map.sc-pap{--fg:#111113; --fg-2:#3a3a3c; --fg-3:#6e6e73; --bg:#ebe8e1; --lbl-halo:#ebe8e1}
+.story.dir .story-map.sc-duo{--bg:#3e050a; --lbl-halo:#3e050a}
 </style>
 <svg class="defs" aria-hidden="true" focusable="false">
   <defs>
@@ -8015,7 +8058,53 @@ function smooth(pts){
   return d + "Z";
 }
 var DCACHE = {};
-function ringsD(key, rs){ if (DCACHE[key]) return DCACHE[key]; var d = (rs || []).map(function(r){ return smooth(dec(r)); }).join(""); DCACHE[key] = d; return d; }
+/* ----- Carrure : planches masculines plus musclées, à l'image du corps 3D -----
+   Ligne par ligne, chaque partie du corps (poitrine, bras, avant-bras, cuisses, mollets) s'élargit autour de son propre
+   centre, sans chevaucher sa voisine ; le décalage est lissé sur la hauteur. Tête, mains et pieds ne bougent pas. Les
+   légendes, cadrages et zones touchées suivent, puisque toute la géométrie passe par ici. */
+var WARP = {};
+function carrure(t, y){
+  function rp(a, b, va, vb){ if (y <= a) return va; if (y >= b) return vb; var u = (y - a) / (b - a); return va + (vb - va) * u * u * (3 - 2 * u); }
+  if (t === "t") return y < 245 ? rp(195, 245, 1, 1.1) : y < 330 ? 1.1 : y < 420 ? rp(330, 420, 1.1, 1.01) : rp(420, 470, 1.01, 1.04);
+  if (t === "b") return y < 390 ? rp(290, 335, 1.1, 1.28) : y < 450 ? rp(385, 420, 1.28, 1.18) : rp(448, 468, 1.18, 1);
+  return y < 645 ? rp(520, 548, 1.04, 1.16) : y < 700 ? rp(640, 670, 1.16, 1.05) : y < 825 ? rp(688, 720, 1.05, 1.2) : rp(818, 845, 1.2, 1);
+}
+function warpRows(v){
+  if (WARP[v] !== undefined) return WARP[v];
+  var B = ATLAS.body2, L = B && B.views[v] && B.views[v].sup;
+  if (!L || !L.sil || (ATLAS.body2f && B === ATLAS.body2f)){ WARP[v] = null; return null; }
+  var R = L.sil.map(dec), rows = [];
+  for (var y = 0; y <= H; y += 2){
+    var xs = [];
+    R.forEach(function(pts){ for (var k = 0, n = pts.length; k < n; k++){ var p = pts[k], q = pts[(k + 1) % n]; if ((p[1] > y) !== (q[1] > y)) xs.push(p[0] + (y - p[1]) * (q[0] - p[0]) / (q[1] - p[1])); } });
+    xs.sort(function(a, b){ return a - b; });
+    var cp = [[0, 0]], prev = 0, prevN = 0;
+    for (var i = 0; i + 1 < xs.length; i += 2){
+      var a = xs[i], b = xs[i + 1], c = (a + b) / 2, f = carrure(a <= W / 2 && b >= W / 2 ? "t" : y > 520 ? "j" : "b", y);
+      var na = c - (c - a) * f, nb = c + (b - c) * f;
+      if (i && na < prevN + Math.max(1, (a - prev) * .35)) na = prevN + Math.max(1, (a - prev) * .35);
+      na = Math.max(0, na); nb = Math.max(na + .5, nb);
+      cp.push([a, na], [b, nb]); prev = b; prevN = nb;
+    }
+    cp.push([W, Math.max(W, prevN + 1)]);
+    rows.push(cp);
+  }
+  WARP[v] = rows; return rows;
+}
+function mapRow(cp, x){
+  for (var i = 1; i < cp.length; i++) if (x <= cp[i][0]){ var a = cp[i - 1], b = cp[i]; return a[1] + (b[1] - a[1]) * (x - a[0]) / ((b[0] - a[0]) || 1); }
+  var z = cp[cp.length - 1]; return x + z[1] - z[0];
+}
+function epaissir(pts, v){
+  var rows = warpRows(v); if (!rows) return pts;
+  return pts.map(function(p){
+    var s = 0, n = 0;
+    for (var dy = -12; dy <= 12; dy += 2){ var r = Math.round((p[1] + dy) / 2); if (r < 0 || r >= rows.length) continue; s += mapRow(rows[r], p[0]); n++; }
+    return [n ? s / n : p[0], p[1]];
+  });
+}
+function decv(a, v){ return epaissir(dec(a), v); }
+function ringsD(key, rs){ if (DCACHE[key]) return DCACHE[key]; var v = key.split("|")[0], d = (rs || []).map(function(r){ return smooth(decv(r, v)); }).join(""); DCACHE[key] = d; return d; }
 function hashL(id){ var h = 0; for (var i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 997; return (h % 9) - 4; }
 
 /* ----- Géométrie des anneaux : aire, centre, appartenance, boîte ----- */
@@ -8042,7 +8131,7 @@ var RCACHE = {};
 function ringsOf(v, d, id){
   var key = v + "|" + d + "|" + id; if (RCACHE[key]) return RCACHE[key];
   var L = ATLAS.body2.views[v] && ATLAS.body2.views[v][d], rs = L && L.paths[id];
-  var out = (rs || []).map(function(r){ return ringInfo(dec(r)); });
+  var out = (rs || []).map(function(r){ return ringInfo(decv(r, v)); });
   RCACHE[key] = out; return out;
 }
 /* Point d'ancrage d'une légende : dans le plus grand anneau du côté demandé (« l », « r », ou indifférent). */
@@ -8225,10 +8314,10 @@ function smoothOpen(pts){
   }
   return d;
 }
-function linesD(key, rs){ if (DCACHE[key]) return DCACHE[key]; var d = (rs || []).map(function(r){ return smoothOpen(dec(r)); }).join(""); DCACHE[key] = d; return d; }
+function linesD(key, rs){ if (DCACHE[key]) return DCACHE[key]; var v = key.split("|")[0], d = (rs || []).map(function(r){ return smoothOpen(decv(r, v)); }).join(""); DCACHE[key] = d; return d; }
 function silD(key, rs){
   if (DCACHE[key]) return DCACHE[key];
-  var d = mittens((rs || []).map(dec), key.indexOf("dos|") === 0).map(smooth).join("");
+  var v = key.split("|")[0], d = mittens((rs || []).map(dec), key.indexOf("dos|") === 0).map(function(p){ return epaissir(p, v); }).map(smooth).join("");
   DCACHE[key] = d; return d;
 }
 function layerMarkup(v, d, kindOf, names, titles, cls){
@@ -8259,14 +8348,14 @@ var BBC = {};
 function bboxOf(id, v, d){
   var key = id + "|" + v + "|" + d; if (BBC[key] !== undefined) return BBC[key];
   var L = ATLAS.body2.views[v] && ATLAS.body2.views[v][d], rs = L && L.paths[id], bb = null;
-  (rs || []).forEach(function(r){ dec(r).forEach(function(p){ bb = bb ? [Math.min(bb[0], p[0]), Math.min(bb[1], p[1]), Math.max(bb[2], p[0]), Math.max(bb[3], p[1])] : [p[0], p[1], p[0], p[1]]; }); });
+  (rs || []).forEach(function(r){ decv(r, v).forEach(function(p){ bb = bb ? [Math.min(bb[0], p[0]), Math.min(bb[1], p[1]), Math.max(bb[2], p[0]), Math.max(bb[3], p[1])] : [p[0], p[1], p[0], p[1]]; }); });
   BBC[key] = bb; return bb;
 }
 
 ATLAS.Map = {
  DEPTHS: DEPTHS,
  /* Vide les caches de géométrie (changement de planches, relance sur place). */
- reset: function(){ DCACHE = {}; RCACHE = {}; CORE_CACHE = {}; BBC = {}; OPEN_CHOOSER = null; },
+ reset: function(){ DCACHE = {}; RCACHE = {}; CORE_CACHE = {}; BBC = {}; WARP = {}; OPEN_CHOOSER = null; },
  /* Plan et vue où une structure est la plus lisible. */
  best: function(id, view){
    var B = ATLAS.body2, b = B.best[id];
@@ -8287,7 +8376,7 @@ ATLAS.Map = {
  },
  onLayer: function(id, v, d){ var L = ATLAS.body2.views[v] && ATLAS.body2.views[v][d]; return !!(L && L.paths[id]); },
  bbox: bboxOf, W: W, H: H, anchor: anchorOf, rings: ringsOf, GKEY: GKEY, GPAL: GPAL,
- silBox: function(v, d){ var L = ATLAS.body2.views[v][d || "sup"], b = null; (L.sil || []).forEach(function(r){ var i = ringInfo(dec(r)); b = b ? [Math.min(b[0], i.x0), Math.min(b[1], i.y0), Math.max(b[2], i.x1), Math.max(b[3], i.y1)] : [i.x0, i.y0, i.x1, i.y1]; }); return b; },
+ silBox: function(v, d){ var L = ATLAS.body2.views[v][d || "sup"], b = null; (L.sil || []).forEach(function(r){ var i = ringInfo(decv(r, v)); b = b ? [Math.min(b[0], i.x0), Math.min(b[1], i.y0), Math.max(b[2], i.x1), Math.max(b[3], i.y1)] : [i.x0, i.y0, i.x1, i.y1]; }); return b; },
  /* Planche fixe (accueil, vignettes) : un seul plan, sans interaction. */
  staticSVG: function(v, d, opt){
    opt = opt || {};
@@ -9510,12 +9599,15 @@ var VS = [
 "#version 300 es",
 "precision highp float;",
 "layout(location=0) in vec3 aPos; layout(location=1) in float aId; layout(location=2) in vec4 aNT; layout(location=3) in vec2 aBone; layout(location=4) in vec2 aWT;",
-"uniform mat4 uVP, uV, uB[19]; uniform vec3 uMin; uniform float uExt; uniform sampler2D uState;",
+"uniform mat4 uVP, uV, uB[19]; uniform vec3 uMin; uniform float uExt; uniform sampler2D uState; uniform highp sampler2D uFr;",
 "out vec3 vN, vL, vVP; out vec4 vS; out vec2 vTT; flat out float vId;",
 "void main(){",
 "  int id = int(aId + .5); vec4 st = texelFetch(uState, ivec2(id, 0), 0);",
 "  if (st.r < .5){ gl_Position = vec4(2., 2., 2., 1.); return; }",
-"  vec3 p = aPos * uExt + uMin; mat4 m = uB[int(aBone.x + .5)] * aWT.x + uB[int(aBone.y + .5)] * (1. - aWT.x);",
+"  vec3 p = aPos * uExt + uMin;",
+"  /* Apparition : la pièce surgit à 80 % de sa taille, autour de son centre, et se pose. */",
+"  if (st.a < .999){ vec3 cc = texelFetch(uFr, ivec2(id, 2), 0).xyz; p = cc + (p - cc) * (.8 + .2 * st.a); }",
+"  mat4 m = uB[int(aBone.x + .5)] * aWT.x + uB[int(aBone.y + .5)] * (1. - aWT.x);",
 "  vec4 wp = m * vec4(p, 1.); vL = p; vN = mat3(uV) * (mat3(m) * aNT.xyz); vVP = (uV * wp).xyz;",
 "  vS = st; vTT = vec2(aNT.w, aWT.y); vId = aId; gl_Position = uVP * wp;",
 "}"].join("\n");
@@ -9535,7 +9627,7 @@ var FS = [
 "  if (uBoxF > 0.){ vec3 bd = (abs(vL - uBoxC) - uBoxH) / uBoxF; fade = 1. - smoothstep(0., 1., max(bd.x, max(bd.y, bd.z))); }",
 "  if (fade < .004) discard;",
 "  int id = int(vId + .5);",
-"  if (uPick > .5){ if (fade < .5) discard; oCol = vec4(float(id & 255) / 255., float(id >> 8) / 255., 1., 1.); oAux = oCol; return; }",
+"  if (uPick > .5){ if (fade < .5) discard; vec3 Np = normalize(vN); if (!gl_FrontFacing) Np = -Np; oCol = vec4(float(id & 255) / 255., float(id >> 8) / 255., 1., 1.); oAux = vec4(Np * .5 + .5, 1.); return; }",
 "  vec3 N = normalize(vN); if (!gl_FrontFacing) N = -N;",
 "  vec4 cb = texelFetch(uState, ivec2(id, 1), 0); vec3 base = cb.rgb; float ty = cb.a, hl = vS.g, dim = vS.b, mus = step(.9, ty);",
 "  float aux = .02 + .98 * fract(float(id) * .61803);",
@@ -9699,6 +9791,7 @@ function creer(canvas, data, opt){
   (function(){
     var dv = new DataView(data.vb.buffer, data.vb.byteOffset, data.vb.byteLength), mn = M.min, ext = M.ext;
     ELS.forEach(function(e, k){
+      if (e.o){ var q0 = (2 * TW + k) * 4; FR[q0] = e.o[0]; FR[q0 + 1] = e.o[1]; FR[q0 + 2] = e.o[2]; }
       if (e.c !== 1 || !e.x || !e.o) return;
       var a = e.x, c = e.o, v0 = e.v[0], n = e.v[1], pas = Math.max(1, Math.floor(n / 500)), C = [0, 0, 0, 0, 0, 0];
       for (var v = v0; v < v0 + n; v += pas){
@@ -9776,7 +9869,7 @@ function creer(canvas, data, opt){
     cam: {yaw: 0, pitch: 0, dist: 4.6, tx: 0, ty: .86, tz: 0}, camA: null, vyaw: 0, flotte: 0, tFl: 0, dY: 0, dP: 0,
     q: [], q0: [], q1: [], tr: [0, 0, 0], tr0: [0, 0, 0], tr1: [0, 0, 0], poseT: 1, poseD: 1,
     box: {c: [0, 0, 0], h: [9, 9, 9], f: 0, a: null}, marge: {l: 0, r: 0, t: 0, b: 0}, raf: 0, last: 0, mort: false,
-    paper: "#0b0b0c", spot: null, lim: null, d0: 0
+    paper: "#0b0b0c", spot: null, lim: null, d0: 0, gr: new Float32Array(NE).fill(1), grR: new Float32Array(NE), grT: 0
   };
   /* Bornes de la caméra autour de la vue choisie : écart de cap et d'inclinaison (radians), zoom relatif au cadrage. */
   function borner(){
@@ -9902,7 +9995,7 @@ function creer(canvas, data, opt){
 
   /* ---------- Dessin ---------- */
   function etat(buf, pres){
-    for (var k = 0; k < NE; k++){ var o = k * 4; buf[o] = pres[k] ? 255 : 0; buf[o + 1] = S.hl[k] * 255; buf[o + 2] = S.dm[k] * 255; buf[o + 3] = 255; }
+    for (var k = 0; k < NE; k++){ var o = k * 4, g = S.gr[k]; buf[o] = pres[k] && g > .001 ? 255 : 0; buf[o + 1] = S.hl[k] * 255; buf[o + 2] = S.dm[k] * 255; buf[o + 3] = Math.round(g * 255); }
     gl.bindTexture(gl.TEXTURE_2D, stTex); gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, TW, 2, gl.RGBA, gl.UNSIGNED_BYTE, buf);
   }
   function scene(pick, style, pres){
@@ -9980,6 +10073,8 @@ function creer(canvas, data, opt){
   /* ---------- Animation ---------- */
   function pas(dt){
     var actif = false, k, v;
+    S.grT += dt;
+    for (k = 0; k < NE; k++) if (S.gr[k] < 1){ var tg = (S.grT - S.grR[k]) / .32; S.gr[k] = tg <= 0 ? 0 : tg >= 1 ? 1 : Math.max(.002, 1 - Math.pow(1 - tg, 3)); actif = true; }
     for (k = 0; k < NE; k++){
       if (S.hl[k] !== S.thl[k]){ v = S.hl[k] + (S.thl[k] > S.hl[k] ? 1 : -1) * dt * 4; S.hl[k] = S.thl[k] > S.hl[k] ? Math.min(S.thl[k], v) : Math.max(S.thl[k], v); actif = true; }
       if (S.dm[k] !== S.tdm[k]){ v = S.dm[k] + (S.tdm[k] > S.dm[k] ? 1 : -1) * dt * 3.2; S.dm[k] = S.tdm[k] > S.dm[k] ? Math.min(S.tdm[k], v) : Math.max(S.tdm[k], v); actif = true; }
@@ -10025,8 +10120,13 @@ function creer(canvas, data, opt){
     gl.bindFramebuffer(gl.FRAMEBUFFER, pfbo); gl.viewport(0, 0, 1, 1); gl.clearBufferfv(gl.COLOR, 0, [1, 1, 0, 1]); gl.clearBufferfv(gl.COLOR, 1, [0, 0, 0, 0]); gl.clearBufferfv(gl.DEPTH, 0, [1]);
     etat(stCur, S.a); scene(true, S.style, S.a);
     var px = new Uint8Array(4); gl.readBuffer(gl.COLOR_ATTACHMENT0); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    /* Normale de la surface touchée : repère de la caméra, ramenée dans celui du monde (rotation inverse de la vue). */
+    var pn = new Uint8Array(4); gl.readBuffer(gl.COLOR_ATTACHMENT1); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pn);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    if (px[2] < 128) return -1; var id = px[0] + px[1] * 256; return id < NE ? id : -1;
+    S.nVise = null;
+    if (px[2] < 128) return -1; var id = px[0] + px[1] * 256;
+    if (pn[3] > 128){ var a = pn[0] / 127.5 - 1, b = pn[1] / 127.5 - 1, c = pn[2] / 127.5 - 1; S.nVise = [mV[0] * a + mV[1] * b + mV[2] * c, mV[4] * a + mV[5] * b + mV[6] * c, mV[8] * a + mV[9] * b + mV[10] * c]; }
+    return id < NE ? id : -1;
   }
   /* Ancres des légendes : pour chaque pièce visible, le pixel de la pièce le plus proche du centre de sa surface
      visible, et la taille de cette surface. Coordonnées de 0 à 1. */
@@ -10065,7 +10165,11 @@ function creer(canvas, data, opt){
 
   var api = {
     meta: M, els: ELS, etat: S, styles: STYLES,
-    couche: function(n, duree){ S.couche = Math.max(1, Math.min(7, n)); cibles(duree); },
+    couche: function(n, duree, pop){
+      S.couche = Math.max(1, Math.min(7, n)); cibles(duree);
+      /* Les muscles du plan qui devient la surface surgissent l'un après l'autre, du haut vers le bas. */
+      if (pop){ S.grT = 0; ELS.forEach(function(e, k){ if (e.c === 1 && !e.ex && e.l === S.couche && S.a[k]){ S.gr[k] = 0; S.grR[k] = Math.max(0, Math.min(1, (1.85 - (e.o ? e.o[1] : 1)) / 1.85)) * .3; } }); boucle(); }
+    },
     filtre: function(fn, duree){ S.filtre = fn || null; cibles(duree); },
     style: function(s){ s = STYLES[s] ? s : "planche"; if (s === S.style) return; S.style = s; S.xf = 1; boucle(); },
     theme: function(o){ Object.assign(S, o); boucle(); },
@@ -10078,6 +10182,23 @@ function creer(canvas, data, opt){
     incliner: function(d){ S.camA = null; S.cam.pitch = Math.max(-.6, Math.min(.75, S.cam.pitch + d)); borner(); boucle(); },
     zoomer: function(f, min, max){ S.camA = null; S.cam.dist = Math.max(min || .35, Math.min(max || 7, S.cam.dist * f)); borner(); boucle(); },
     limites: function(l){ S.lim = l || null; },
+    /* Animation pilotée de l'extérieur (défilement de l'accueil) : caméra calculée sans l'animer, réglée d'un coup,
+       pose intermédiaire entre deux poses. */
+    camPour: function(bb, yaw, pitch, serre, mg){
+      var g = S.marge; S.marge = mg || g; var w = dimW(), h = dimH(), m = S.marge, fw = Math.max(.2, 1 - (m.l + m.r) / w), fh = Math.max(.2, 1 - (m.t + m.b) / h);
+      var cx = (bb[0][0] + bb[1][0]) / 2, cy = (bb[0][1] + bb[1][1]) / 2, cz = (bb[0][2] + bb[1][2]) / 2, ex = (bb[1][0] - bb[0][0]) / 2, ey = (bb[1][1] - bb[0][1]) / 2, ez = (bb[1][2] - bb[0][2]) / 2;
+      var hw = Math.abs(Math.cos(yaw)) * ex + Math.abs(Math.sin(yaw)) * ez, hh = ey * Math.cos(pitch) + Math.hypot(ex, ez) * Math.abs(Math.sin(pitch));
+      var k = serre || 1.06, t = Math.tan(FOV / 2), dv = hh * k / (t * fh), dh = hw * k / (t * (w / h) * fw);
+      S.marge = g;
+      return {yaw: yaw, pitch: pitch, dist: Math.max(dv, dh) + Math.hypot(ex, ez) * .3, tx: cx, ty: cy, tz: cz};
+    },
+    regler: function(c, mg){ S.camA = null; Object.assign(S.cam, c); if (mg) Object.assign(S.marge, mg); boucle(); },
+    poserMelange: function(pa, pb, t){
+      for (var s = 0; s < NS; s++){ var a = (pa && pa.q && pa.q[M.seg[s]]) || [0, 0, 0, 1], b = (pb && pb.q && pb.q[M.seg[s]]) || [0, 0, 0, 1]; S.q[s] = qSlerp(a, b, t); S.q0[s] = S.q1[s] = S.q[s]; }
+      var ta = (pa && pa.t) || [0, 0, 0], tb = (pb && pb.t) || [0, 0, 0]; for (var k = 0; k < 3; k++) S.tr[k] = S.tr0[k] = S.tr1[k] = ta[k] + (tb[k] - ta[k]) * t;
+      S.poseT = 1; matrices(); boucle();
+    },
+    normaleVisee: function(){ return S.nVise || null; },
     flotter: function(amp){ S.flotte = amp || 0; if (amp) S.tFl = 0; boucle(); },
     pause: function(on){ S.pause = !!on; if (!on){ S.last = 0; boucle(); } else if (S.raf){ cancelAnimationFrame(S.raf); S.raf = 0; } },
     projecteur: function(p){ S.spot = p || null; boucle(); },
@@ -10167,17 +10288,16 @@ function ProfPill(host, o){
     var it = items[i];
     Array.prototype.forEach.call(el.querySelectorAll(".prof-dots i"), function(d, k){ d.classList.toggle("on", k === i); });
     w.setAttribute("aria-valuenow", i + 1); w.setAttribute("aria-valuetext", it.t);
-    el.querySelector('[data-pd="-1"]').disabled = i === 0; el.querySelector('[data-pd="1"]').disabled = i === n - 1;
     var poser = function(){ inn.querySelector(".prof-ico").innerHTML = it.ico; inn.querySelector(".prof-t").textContent = it.t; };
     if (!dir || reduit() || !inn.animate){ poser(); inn.style.transform = ""; return; }
     var a = inn.animate([{transform: inn.style.transform || "translateY(0)", opacity: 1}, {transform: "translateY(" + (-dir * 22) + "px)", opacity: 0}], {duration: 140, easing: "ease-in", fill: "forwards"});
     a.onfinish = function(){ poser(); inn.style.transform = ""; a.cancel(); inn.animate([{transform: "translateY(" + (dir * 22) + "px)", opacity: 0}, {transform: "translateY(0)", opacity: 1}], {duration: 420, easing: "cubic-bezier(.34,1.42,.64,1)"}); };
     bulle.textContent = it.t; el.classList.add("bulle-on"); clearTimeout(bT); bT = setTimeout(function(){ el.classList.remove("bulle-on"); }, 1500);
   }
+  /* Après le plan le plus profond, on revient à la surface (et l'inverse). */
   function aller(j, dir){
-    j = Math.max(0, Math.min(n - 1, j));
-    if (j === i){ if (inn.animate && !reduit()) inn.animate([{transform: "translateY(0)"}, {transform: "translateY(" + (dir || 1) * 5 + "px)"}, {transform: "translateY(0)"}], {duration: 260, easing: "ease-out"}); return; }
-    var d = j > i ? 1 : -1; i = j; rendu(d); if (o.onChange) o.onChange(i);
+    j = ((j % n) + n) % n; if (j === i) return;
+    var d = dir || (j > i ? 1 : -1); i = j; rendu(d); if (o.onChange) o.onChange(i);
   }
   function fermerMenu(){ if (menu){ menu.remove(); menu = null; document.removeEventListener("pointerdown", dehors, true); } }
   function dehors(e){ if (menu && !el.contains(e.target)) fermerMenu(); }
@@ -10248,15 +10368,19 @@ var POSES = {
   /* Avant-bras et main */
   avbras_face: variante(ATHLETE, {brasR: [-2, 18, 20], avantbrasR: [22, 0, 26], mainR: [-8, 0, 0], tete: [-3, 0, -16]}),
   avbras_profil: variante(ATHLETE, {brasR: [10, 12, -4], avantbrasR: [84, 0, -10], mainR: [24, 0, 0], tete: [-3, 0, -18]}),
-  avbras_dos: variante(ATHLETE, {brasR: [4, 14, -8], avantbrasR: [62, 0, -62], mainR: [14, 0, 0], tete: [-3, 0, 12]}),
+  /* Dos de l'avant-bras : l'avant-bras levé devant le buste, face antérieure vers lui ; la caméra regarde sa face
+     postérieure. */
+  avbras_dos: variante(ATHLETE, {brasR: [34, 16, -48], avantbrasR: [96, 0, -70], mainR: [8, 0, 0], tete: [6, 0, -18]}),
   /* Buste */
   buste_face: variante(ATHLETE, {brasR: [-2, 9, -4], brasL: [-2, 9, -4], avantbrasR: [10, 0, 0], avantbrasL: [10, 0, 0]}),
-  buste_profil: variante(ATHLETE, {thorax: [-2, -2, -8], ceintureR: [0, 2, -4], brasR: [12, 12, -72], avantbrasR: [86, 0, -50], mainR: [10, 0, 0], brasL: [10, 10, -70], avantbrasL: [84, 0, -50], mainL: [10, 0, 0], tete: [-3, 0, -14]}),
-  buste_dos: variante(ATHLETE, {ceintureR: [0, -3, 16], ceintureL: [0, -3, 16], brasR: [-12, 8, -6], brasL: [-12, 8, -6], avantbrasR: [14, 0, 0], avantbrasL: [14, 0, 0], tete: [-2, 0, 8]}),
+  buste_profil: variante(ATHLETE, {thorax: [-2, -2, -8], ceintureR: [0, 2, -4], brasR: [-26, 10, -4], avantbrasR: [22, 0, -10], mainR: [0, 0, 0], brasL: [10, 13, -8], avantbrasL: [18, 0, 0], mainL: [0, 0, 0], mainL: [10, 0, 0], tete: [-3, 0, -14]}),
+  /* Dos large : omoplates écartées, bras un peu décollés, coudes fléchis ; les dorsaux s'étalent. */
+  buste_dos: variante(ATHLETE, {thorax: [-2, -2, 4], ceintureR: [0, 2, -8], ceintureL: [0, 2, -8], brasR: [6, 26, -26], brasL: [6, 26, -26], avantbrasR: [42, 0, -30], avantbrasL: [42, 0, -30], tete: [-2, 0, 8]}),
   /* Hanches */
   hanche_face: {bassin: [0, 2, 4], thorax: [3, 0, 0], cuisseR: [14, 6, 16], jambeR: [0, 0, 0], piedR: [-8, 0, 0], cuisseL: [-2, 3, 0],
     brasR: [-4, 13, 0], brasL: [-4, 13, 0], avantbrasR: [14, 0, 0], avantbrasL: [14, 0, 0], tete: [-3, 0, -6]},
-  hanche_profil: variante(ATHLETE, {bassin: [0, 0, 0], cuisseR: [22, 2, 0], jambeR: [14, 0, 0], piedR: [-4, 0, 0], cuisseL: [-10, 3, 0], jambeL: [10, 0, 0], piedL: [-6, 0, 0], tete: [-3, 0, -14]}),
+  /* Le bras du côté de la caméra passe en arrière et vers le bas : il ne cache plus la hanche. */
+  hanche_profil: variante(ATHLETE, {bassin: [0, 0, 0], cuisseR: [22, 2, 0], jambeR: [14, 0, 0], piedR: [-4, 0, 0], cuisseL: [-10, 3, 0], jambeL: [10, 0, 0], piedL: [-6, 0, 0], brasR: [-26, 12, -4], avantbrasR: [18, 0, 0], tete: [-3, 0, -14]}),
   hanche_dos: ATHLETE,
   /* Cuisse et genou */
   cuisse_face: ATHLETE,
@@ -10264,7 +10388,8 @@ var POSES = {
   cuisse_dos: ATHLETE,
   /* Jambe et pied */
   jambe_face: variante(ATHLETE, {cuisseR: [8, 4, 12], jambeR: [6, 0, 0], piedR: [-4, 0, 0]}),
-  jambe_profil: variante(ATHLETE, {cuisseL: [8, 4, 6], jambeL: [6, 0, 0], piedL: [0, 0, 0], cuisseR: [-12, 2, 0], jambeR: [20, 0, 0], piedR: [20, 0, 0], tete: [-3, 0, -14]}),
+  /* Genou légèrement fléchi vers l'avant, la pointe du pied reste à sa place (talon un peu levé). */
+  jambe_profil: variante(ATHLETE, {cuisseL: [-2, 3, 0], jambeL: [0, 0, 0], piedL: [0, 0, 0], cuisseR: [10, 3, 4], jambeR: [24, 0, 0], piedR: [-6, 0, 0], tete: [-3, 0, -14]}),
   jambe_dos: variante(ATHLETE, {bassin: [0, -3, 0], cuisseR: [0, 1, 0], jambeR: [0, 0, 0], piedR: [32, 0, 0], cuisseL: [-6, 3, 0], jambeL: [42, 0, 0], piedL: [16, 0, 0], _t: [0, .068, 0]})
 };
 /* Le même geste du côté gauche : segments gauche et droit échangés, rotations du tronc inversées. */
@@ -10298,11 +10423,11 @@ function qPose(nom, cote){
 var VUES = [["face", "Face"], ["profil", "Profil"], ["dos", "Dos"]];
 var REG = [
   {id: "", n: "Corps entier", k: 1.03, v: {face: [0, 0, "planche"], profil: [-90, 0, "planche"], dos: [180, 0, "planche"]}},
-  {id: "tete_cou", n: "Tête et cou", box: [[-.2, 1.37, -.24], [.2, 1.76, .24]], k: 1.04, v: {face: [8, 2, "cou_face"], profil: [66, 2, "cou_profil"], dos: [-150, 4, "cou_dos"]}},
-  {id: "epaule_bras", n: "Épaule et bras", box: [[-.38, 1.0, -.2], [-.04, 1.52, .2]], k: 1.25, membre: 1, lat: 1, v: {face: [-28, 4, "bras_face"], profil: [-90, 3, "bras_profil"], dos: [-152, 3, "bras_dos"]}},
-  {id: "avantbras_main", n: "Avant-bras et main", box: [[-.44, .66, -.22], [-.12, 1.16, .22]], k: 1.3, membre: 1, lat: 1, v: {face: [-36, 6, "avbras_face"], profil: [-90, 4, "avbras_profil"], dos: [-150, 6, "avbras_dos"]}},
-  {id: "buste", n: "Buste", box: [[-.3, .85, -.26], [.3, 1.48, .26]], k: .98, v: {face: [28, -4, "buste_face"], profil: [-80, -2, "buste_profil"], dos: [165, 0, "buste_dos"]}},
-  {id: "bassin_hanche", n: "Hanches", box: [[-.23, .68, -.26], [.23, 1.09, .26]], k: .98, v: {face: [12, 4, "hanche_face"], profil: [-90, 2, "hanche_profil"], dos: [200, 2, "hanche_dos"]}},
+  {id: "tete_cou", n: "Tête et cou", box: [[-.2, 1.37, -.24], [.2, 1.76, .24]], k: .8, v: {face: [8, 2, "cou_face"], profil: [66, 2, "cou_profil"], dos: [-150, 4, "cou_dos"]}},
+  {id: "epaule_bras", n: "Épaule et bras", box: [[-.38, 1.0, -.2], [-.04, 1.52, .2]], k: 1.25, membre: 1, lat: 1, v: {face: [-28, 4, "bras_face", .8], profil: [-90, 3, "bras_profil"], dos: [-152, 3, "bras_dos", .8]}},
+  {id: "avantbras_main", n: "Avant-bras et main", box: [[-.44, .66, -.22], [-.12, 1.16, .22]], k: .92, membre: 1, lat: 1, v: {face: [-36, 6, "avbras_face"], profil: [-90, 4, "avbras_profil"], dos: [-22, 6, "avbras_dos", .85]}},
+  {id: "buste", n: "Buste", box: [[-.3, .85, -.26], [.3, 1.48, .26]], k: .98, v: {face: [28, -4, "buste_face", .82], profil: [-80, -2, "buste_profil"], dos: [165, 0, "buste_dos", .82]}},
+  {id: "bassin_hanche", n: "Hanches", box: [[-.23, .68, -.26], [.23, 1.09, .26]], k: .98, v: {face: [12, 4, "hanche_face", .8], profil: [-90, 2, "hanche_profil"], dos: [200, 2, "hanche_dos", .8]}},
   {id: "cuisse_genou", n: "Cuisse et genou", box: [[-.25, .33, -.26], [.005, 1.0, .26]], k: .98, lat: 1, v: {face: [-18, 4, "cuisse_face"], profil: [-90, 3, "cuisse_profil"], dos: [-160, 4, "cuisse_dos"]}},
   {id: "jambe_pied", n: "Jambe et pied", box: [[-.23, -.03, -.26], [.005, .53, .28]], k: 1, lat: 1, v: {face: [-24, 22, "jambe_face"], profil: [-90, 4, "jambe_profil"], dos: [195, -8, "jambe_dos"]}}
 ];
@@ -10318,7 +10443,10 @@ var IC = {
   grp: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5a8.5 8.5 0 1 0 0 17c1.3 0 1.9-.8 1.9-1.8 0-1.4-1.2-1.6-1.2-2.8 0-1 .8-1.6 1.9-1.6h2.2c2.3 0 4.2-1.6 4.2-4.1C21 6.5 17.1 3.5 12 3.5z"/><circle cx="7.6" cy="11.4" r="1.2" fill="currentColor"/><circle cx="10.2" cy="7.4" r="1.2" fill="currentColor"/><circle cx="15" cy="7.6" r="1.2" fill="currentColor"/></svg>',
   tag: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h9M4 12h6M4 17h9"/><circle cx="18" cy="7" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="18" cy="17" r="1.6"/></svg>',
   print: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 8V4h10v4M7 17H5a1.5 1.5 0 0 1-1.5-1.5v-5A2.5 2.5 0 0 1 6 8h12a2.5 2.5 0 0 1 2.5 2.5v5A1.5 1.5 0 0 1 19 17h-2"/><path d="M7 14h10v6H7z"/></svg>',
-  x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>'
+  x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+  plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
+  moins: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg>',
+  cadre: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg>'
 };
 var RENDUS = [["planche", "Planche"], ["mono", "Mono"], ["epure", "Épuré"]];
 var DATA = null, ATTENTE = null;
@@ -10349,7 +10477,7 @@ function monter(host, env){
       '<canvas class="c3-cv" role="img" aria-label="' + esc(T("Corps humain en trois dimensions")) + '"></canvas>' +
       '<svg class="c3-fil" aria-hidden="true"></svg><div class="c3-noms" aria-hidden="true"></div>' +
       '<div class="c3-tl">' +
-        '<div class="seg c3-vue" role="group" aria-label="' + esc(T("Vue")) + '">' + VUES.map(function(v){ return '<button type="button" data-vue="' + v[0] + '" aria-pressed="false">' + esc(T(v[1])) + "</button>"; }).join("") + "</div>" +
+        '<div class="seg c3-vue repli" role="group" aria-label="' + esc(T("Vue")) + '">' + VUES.map(function(v){ return '<button type="button" data-vue="' + v[0] + '" aria-pressed="false">' + esc(T(v[1])) + "</button>"; }).join("") + "</div>" +
         '<div class="c3-prof"></div>' +
       "</div>" +
       '<div class="c3-outils">' +
@@ -10358,13 +10486,15 @@ function monter(host, env){
         '<button type="button" class="ov-pill glass" data-o="grp" aria-pressed="false" title="' + esc(T("Couleurs par groupe")) + '">' + IC.grp + '<span class="t">' + esc(T("Groupes")) + "</span></button>" +
         '<button type="button" class="ov-pill glass" data-o="print" title="' + esc(T("Imprimer une carte")) + '">' + IC.print + '<span class="t">' + esc(T("Imprimer")) + "</span></button>" +
       "</div>" +
+      '<div class="c3-zoom" role="group" aria-label="' + esc(T("Zoom")) + '"><button type="button" data-z="1" aria-label="' + esc(T("Zoomer")) + '">' + IC.plus + '</button><button type="button" data-z="-1" aria-label="' + esc(T("Dézoomer")) + '">' + IC.moins + '</button><button type="button" data-z="0" aria-label="' + esc(T("Recadrer")) + '">' + IC.cadre + "</button></div>" +
+      '<div class="c3-msg" hidden></div>' +
       '<div class="c3-fiche glass" hidden></div>' +
       '<div class="c3-bulle" hidden></div>' +
       '<div class="c3-etat"><p></p></div>' +
     "</div>";
   var root = host.firstChild, q = function(s){ return root.querySelector(s); }, qa = function(s){ return Array.prototype.slice.call(root.querySelectorAll(s)); };
   cv = q(".c3-cv");
-  var elFiche = q(".c3-fiche"), elBulle = q(".c3-bulle"), elEtat = q(".c3-etat"), elFil = q(".c3-fil"), elNoms = q(".c3-noms"), elZone = q(".c3-zone");
+  var elFiche = q(".c3-fiche"), elBulle = q(".c3-bulle"), elEtat = q(".c3-etat"), elFil = q(".c3-fil"), elNoms = q(".c3-noms"), elZone = q(".c3-zone"), elMsg = q(".c3-msg"), elVue = q(".c3-vue");
   var prof = env.nu ? null : ProfPill(q(".c3-prof"), {T: T, reduit: env.reduit, label: "Profondeur", index: st.c - 1,
     items: COUCHES.map(function(c, i){ return {ico: icoProf(COUCHE_ICO[i]), t: T(c[0])}; }), onChange: function(i){ setCouche(i + 1); }});
   function tel(){ return root.clientWidth < 760; }
@@ -10394,7 +10524,7 @@ function monter(host, env){
   /* ---------- Région, vue, couche, pose ---------- */
   function reg(){ return REGI[st.r] || REG[0]; }
   function vueDe(r){ return (r || reg()).v[st.vue] || (r || reg()).v.face; }
-  function cote(r){ return (r || reg()).lat ? st.cote : "R"; }
+  function cote(){ return st.cote === "L" ? "L" : "R"; }
   function filtre(){ return st.libre && st.libre.filtre || null; }
   /* Ce qu'on cadre : la boîte de la région une fois posée, vue sous l'angle de la vue choisie. Pour le bras et
      l'avant-bras, seulement les pièces du membre ; tout le corps reste affiché. */
@@ -10412,12 +10542,13 @@ function monter(host, env){
       var bp = eng.boitePosee(qPose(vv[2], cs), function(e){ if (ks == null) return true; if (e.s && e.s !== cs) return false; return ks.indexOf(e.r0) >= 0; }, r.box ? bb : null);
       if (bp) bb = bp;
     }
-    return {bb: bb, yaw: yaw, pitch: vv[1] * Math.PI / 180, serre: r.k * (r.id ? .9 : 1)};
+    return {bb: bb, yaw: yaw, pitch: vv[1] * Math.PI / 180, serre: r.k * (r.id ? .9 : 1) * (vv[3] || 1)};
   }
   function cadrage(duree){
     if (!eng) return; eng.marges(marges());
     var c = cadre(); eng.cadrer(c.bb, c.yaw, c.pitch, duree, c.serre);
-    eng.limites(st.libre || env.nu ? null : {y: c.yaw, yh: LIM, p: c.pitch, ph: LIM, z: [.55, 1.5]});
+    eng.limites(st.libre || env.nu ? null : {z: [.55, 1.5]});
+    st.base = {y: c.yaw, p: c.pitch}; ry = rp = 0;
   }
   function poseNom(){ return st.libre ? st.libre.pose : vueDe()[2]; }
   /* Changement de cadrage : un travelling de caméra et un changement de pose, rien d'autre. */
@@ -10429,9 +10560,9 @@ function monter(host, env){
     cadrage(d);
     legendes(); syncUI();
   }
-  function setCouche(n){ n = Math.max(1, Math.min(COUCHES.length, n)); if (n === st.c) return; st.c = n; if (eng) eng.couche(n, 0); legendes(); syncUI(); }
+  function setCouche(n){ n = Math.max(1, Math.min(COUCHES.length, n)); if (n === st.c) return; st.c = n; if (eng) eng.couche(n, 0, !env.reduit); legendes(); syncUI(); }
   function setRegion(id, garderCote){ id = id === "torse" || id === "dos" ? "buste" : id; if (!REGI[id]) id = ""; if (id === st.r && !st.libre) return; st.r = id; if (!garderCote) st.cote = "R"; st.libre = null; st.etiq = null; fermerFiche(); appliquer(true); }
-  function setVue(v){ if (["face", "profil", "dos"].indexOf(v) < 0 || (v === st.vue && !st.libre)) return; st.vue = v; st.libre = null; appliquer(true); }
+  function setVue(v, cs){ if (["face", "profil", "dos"].indexOf(v) < 0) return; cs = cs || st.cote; if (v === st.vue && cs === st.cote && !st.libre) return; st.vue = v; st.cote = cs; st.libre = null; cacherMsg(); appliquer(true); }
   function setRendu(s){ st.rendu = s; if (eng) eng.style(s); legendes(); syncUI(); }
   /* Couleurs : par rôle dans un exercice, sinon par groupe musculaire (les mêmes que sur la carte 2D). */
   function teintes(){
@@ -10446,25 +10577,67 @@ function monter(host, env){
   /* ---------- Sélection ---------- */
   /* Région la mieux placée pour voir une pièce : celle du modèle (le torse et le dos forment le buste), du côté de la
      pièce pour un membre. La vue (face, profil, dos) reste celle choisie : la pièce touchée y est visible. */
-  function allerVers(e){
+  function ang(a){ return ((a + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI; }
+  function yawDe(r, v, cs){ return r.v[v][0] * (cs === "L" ? -1 : 1) * Math.PI / 180; }
+  /* Repère d'orientation : le point de l'axe du membre (épaule → coude, coude → poignet, hanche → genou, genou →
+     cheville, d'après les articulations du modèle) à la hauteur de la pièce ; l'axe du corps pour le tronc et la tête. */
+  var SEGS = {epaule_bras: ["bras", "avantbras"], avantbras_main: ["avantbras", "main"], cuisse_genou: ["cuisse", "jambe"], jambe_pied: ["jambe", "pied"]};
+  function refDe(id, cs, o){
+    var M = DATA && DATA.meta, sg = SEGS[id];
+    if (!M || !sg || !o) return [0, o ? o[1] : 0, 0];
+    var pa = M.pivot[M.seg.indexOf(sg[0] + cs)], pb = M.pivot[M.seg.indexOf(sg[1] + cs)]; if (!pa || !pb) return [0, o[1], 0];
+    var d = [pb[0] - pa[0], pb[1] - pa[1], pb[2] - pa[2]], l2 = d[0] * d[0] + d[1] * d[1] + d[2] * d[2] || 1;
+    var t = Math.max(-.3, Math.min(1.2, ((o[0] - pa[0]) * d[0] + (o[1] - pa[1]) * d[1] + (o[2] - pa[2]) * d[2]) / l2));
+    return [pa[0] + d[0] * t, pa[1] + d[1] * t, pa[2] + d[2] * t];
+  }
+  /* Vue la mieux placée pour une pièce : sa région, puis le côté du membre où elle se trouve autour de son os (ou
+     autour de l'axe du corps pour le tronc) — devant : face, sur le côté : profil, derrière : dos. Repli sur l'orientation
+     de la surface touchée si la pièce est centrée. */
+  var DIR = {face: 0, profil: -Math.PI / 2, dos: Math.PI};
+  function allerVers(e, n){
     if (env.nu || st.libre || e.r0 == null) return false;
     var id = R0[e.r0]; if (id == null || !REGI[id]) return false;
-    var r = REGI[id], cs = r.lat && e.s === "L" ? "L" : "R";
-    if (id === st.r && (!r.lat || cs === st.cote)) return false;
-    st.r = id; st.cote = cs; st.etiq = null; appliquer(true); return true;
+    var r = REGI[id], cs = e.s || (e.o && e.o[0] > .01 ? "L" : e.o && e.o[0] < -.01 ? "R" : st.cote);
+    var ref = refDe(id, cs, e.o), dx = e.o ? e.o[0] - ref[0] : 0, dz = e.o ? e.o[2] - ref[2] : 0, phi = null;
+    if (Math.hypot(dx, dz) > .008) phi = Math.atan2(dx, dz);
+    else if (n && Math.hypot(n[0], n[2]) > .2) phi = Math.atan2(n[0], n[2]);
+    var vue = st.vue, c2 = r.lat ? cs : st.cote;
+    if (phi != null){
+      var best = null;
+      VUES.forEach(function(v){ ["R", "L"].forEach(function(c){
+        if ((r.lat || v[0] === "profil") && c !== cs) return;
+        var d = Math.abs(ang((v[0] === "profil" && c === "L" ? -DIR.profil : DIR[v[0]]) - phi)); if (!best || d < best.d - 1e-3) best = {v: v[0], c: c, d: d};
+      }); });
+      if (best){ vue = best.v; c2 = best.v === "profil" || r.lat ? best.c : (id === st.r ? st.cote : "R"); }
+    }
+    if (id === st.r && vue === st.vue && c2 === st.cote) return false;
+    st.r = id; st.vue = vue; st.cote = c2; st.etiq = null; appliquer(true); return true;
   }
-  function choisir(k){
+  /* Petit message, quand la vue a changé : le nom du muscle et l'accès à sa fiche, sans rien cacher. */
+  function montrerMsg(e){
+    elMsg.innerHTML = '<span class="c3-msg-n">' + esc(nomCourt(e)) + '</span><button type="button" class="c3-msg-b" data-fiche="' + esc(e.a) + '">' + esc(T("Ouvrir la fiche")) + "</button>";
+    elMsg.hidden = false;
+  }
+  function cacherMsg(){ elMsg.hidden = true; }
+  function choisir(k, n){
     if (!eng) return;
-    /* Toucher le vide : la fiche se ferme et le corps reprend ses couleurs. */
+    /* Toucher le vide : la fiche (ou le message) se ferme et le corps reprend ses couleurs. */
     if (k < 0){ fermerFiche(); if (env.fermer && !env.nu) env.fermer(); return; }
     var e = eng.els[k], avait = !elFiche.hidden && st.sel != null && st.sel !== k;
-    allerVers(e);
+    var bouge = allerVers(e, n);
     st.sel = k;
     var meme = e.a ? function(x){ return x.a === e.a; } : function(x, i){ return i === k; };
-    eng.selection(meme, true);
-    /* Une structure qui a sa fiche : la fiche complète s'ouvre aussitôt (comme sur la carte) ; un autre muscle la
-       remplace. Les autres pièces gardent le petit panneau. */
-    if (e.a && env.fiche && !env.nu){ if (!elFiche.hidden) elFiche.hidden = true; env.fiche(e.a); legendes(); return; }
+    /* Le muscle est mis en évidence, le reste garde ses couleurs. */
+    eng.selection(meme, false);
+    /* Une structure qui a sa fiche : si la vue a changé, un petit message propose la fiche ; sinon (le muscle était
+       déjà sous les yeux), la fiche s'ouvre aussitôt et un autre muscle la remplace. Les autres pièces gardent le
+       petit panneau. */
+    if (e.a && env.fiche && !env.nu){
+      if (!elFiche.hidden) elFiche.hidden = true;
+      if (bouge){ if (env.fermer) env.fermer(); montrerMsg(e); legendes(); return; }
+      cacherMsg(); env.fiche(e.a); legendes(); return;
+    }
+    cacherMsg();
     var o = e.a ? env.nom(e.a) : null, cats = ["Peau", "Muscle", "Tissu conjonctif", "Cartilage", "Os"];
     elFiche.innerHTML = '<button type="button" class="c3-x" aria-label="' + esc(T("Fermer")) + '">' + IC.x + "</button>" +
       '<span class="kicker red">' + esc(T(cats[e.c])) + " · " + esc(T(couche(e.l)[0])) + "</span>" +
@@ -10481,6 +10654,7 @@ function monter(host, env){
     }
   }
   function fermerFiche(){
+    cacherMsg();
     if (st.sel == null && elFiche.hidden) return;
     st.sel = null; if (st.iso){ st.iso = false; if (eng) eng.filtre(filtre()); } if (eng) eng.selection(null);
     if (!env.reduit && elFiche.animate && !elFiche.hidden){ var an = elFiche.animate([{transform: "none", opacity: 1}, {transform: "translateY(18px)", opacity: 0}], {duration: 220, easing: "ease-in"}); an.onfinish = function(){ if (st.sel == null) elFiche.hidden = true; }; }
@@ -10564,23 +10738,43 @@ function monter(host, env){
   /* ---------- Gestes ----------
      Glisser regarde autour de la vue, de ±25° dans tous les sens (pas de tour complet : on change de côté avec Face,
      Profil, Dos) ; pincer ou la molette rapprochent, dans des limites. Pas d'inertie : tout s'arrête au lâcher. */
-  var ptr = {}, np = 0, glisse = false, x0 = 0, y0 = 0, pinch = 0, survolT = 0;
+  var ptr = {}, np = 0, glisse = false, x0 = 0, y0 = 0, pinch = 0, survolT = 0, ry = 0, rp = 0, bascule = false, my2 = 0;
+  /* Résistance : libre jusqu'à 15°, puis de plus en plus dur (jusqu'à ~30°) ; au-delà de 52° de geste, la vue bascule. */
+  var TRIG = 52 * Math.PI / 180;
+  function mou(r){ var a = Math.abs(r), l0 = LIM * .6; return a <= l0 ? r : (r < 0 ? -1 : 1) * Math.min(LIM * 1.25, l0 + (a - l0) * .4); }
+  function regarder(){ if (!eng || !st.base) return; var c = eng.etat.cam; eng.etat.camA = null; c.yaw = st.base.y + mou(ry); c.pitch = st.base.p + mou(rp); eng.redessiner(); }
+  /* Vue voisine dans le sens du geste : face → profil → dos (et l'inverse), du même côté pour un membre. */
+  function voisine(sens){
+    var r = reg(), cur = st.base.y + ry, best = null;
+    VUES.forEach(function(v){ ["R", "L"].forEach(function(c){
+      if (v[0] === st.vue && c === st.cote) return; if (r.lat && c !== st.cote) return;
+      var d = ang(yawDe(r, v[0], c) - cur); if (d * sens < .2) return;
+      if (!best || Math.abs(d) < best.d) best = {v: v[0], c: c, d: Math.abs(d)};
+    }); });
+    if (best){ setVue(best.v, best.c); }
+  }
   cv.addEventListener("pointerdown", function(e){
     if (!eng) return; passerIntro();
     ptr[e.pointerId] = {x: e.clientX, y: e.clientY}; np = Object.keys(ptr).length;
     try { cv.setPointerCapture(e.pointerId); } catch (er){}
-    if (np === 1){ glisse = false; x0 = e.clientX; y0 = e.clientY; }
-    if (np === 2){ var p = Object.keys(ptr).map(function(k){ return ptr[k]; }); pinch = Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y); glisse = true; }
+    if (np === 1){ glisse = false; bascule = false; x0 = e.clientX; y0 = e.clientY; }
+    if (np === 2){ var p = Object.keys(ptr).map(function(k){ return ptr[k]; }); pinch = Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y); my2 = (p[0].y + p[1].y) / 2; glisse = true; }
     elBulle.hidden = true;
     if (prof) prof.fermer();
+    elVue.classList.add("repli");
   });
   cv.addEventListener("pointermove", function(e){
     if (!eng) return;
     if (ptr[e.pointerId]){
       var p0 = ptr[e.pointerId]; ptr[e.pointerId] = {x: e.clientX, y: e.clientY};
-      if (np === 2){ var p = Object.keys(ptr).map(function(k){ return ptr[k]; }), d = Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y); if (pinch > 0 && d > 0) eng.zoomer(pinch / d, .2, 9); pinch = d; legendes(false); return; }
+      /* Deux doigts : pincer rapproche, glisser ensemble vers le haut ou le bas incline la vue. */
+      if (np === 2){ var p = Object.keys(ptr).map(function(k){ return ptr[k]; }), d = Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y), m2 = (p[0].y + p[1].y) / 2; if (pinch > 0 && d > 0) eng.zoomer(pinch / d, .2, 9); pinch = d; rp += (m2 - my2) * .004; my2 = m2; regarder(); legendes(false); return; }
       if (!glisse && Math.hypot(e.clientX - x0, e.clientY - y0) > 6){ glisse = true; legendes(false); root.classList.add("c3-glisse"); }
-      if (glisse){ eng.tourner(-(e.clientX - p0.x) * .006, 0); eng.incliner((e.clientY - p0.y) * .005); }
+      if (glisse && !bascule){
+        ry -= (e.clientX - p0.x) * .006; if (e.pointerType === "mouse") rp += (e.clientY - p0.y) * .005;
+        regarder();
+        if (!env.nu && !st.libre && Math.abs(ry) > TRIG){ bascule = true; voisine(ry > 0 ? 1 : -1); }
+      }
       return;
     }
     if (e.pointerType !== "mouse") return;
@@ -10595,21 +10789,29 @@ function monter(host, env){
     if (!ptr[e.pointerId]) return; delete ptr[e.pointerId]; np = Object.keys(ptr).length;
     root.classList.remove("c3-glisse");
     if (np) return;
-    if (!glisse && eng){ var r = cv.getBoundingClientRect(); choisir(eng.viser(e.clientX - r.left, e.clientY - r.top)); }
+    if (!glisse && eng){ var r = cv.getBoundingClientRect(), k = eng.viser(e.clientX - r.left, e.clientY - r.top); choisir(k, eng.normaleVisee()); }
     else if (eng){ eng.etat.vyaw = 0; legendes(); }
     glisse = false;
   }
-  cv.addEventListener("pointerup", fin); cv.addEventListener("pointercancel", fin);
+  /* Geste repris par la page (défilement au doigt) : rien n'est désigné. */
+  function annule(e){ if (!ptr[e.pointerId]) return; delete ptr[e.pointerId]; np = Object.keys(ptr).length; root.classList.remove("c3-glisse"); if (!np){ glisse = false; legendes(); } }
+  cv.addEventListener("pointerup", fin); cv.addEventListener("pointercancel", annule);
   cv.addEventListener("pointerleave", function(){ clearTimeout(survolT); elBulle.hidden = true; });
-  cv.addEventListener("wheel", function(e){ if (!eng) return; e.preventDefault(); passerIntro(); eng.zoomer(Math.exp(Math.max(-60, Math.min(60, e.deltaY)) * .0022), .2, 9); legendes(false); legendes(); }, {passive: false});
+  /* Molette : la page défile ; avec Ctrl (ou le pincement du pavé tactile), le corps se rapproche. */
+  cv.addEventListener("wheel", function(e){ if (!eng || !e.ctrlKey) return; e.preventDefault(); passerIntro(); eng.zoomer(Math.exp(Math.max(-60, Math.min(60, e.deltaY)) * .006), .2, 9); legendes(false); legendes(); }, {passive: false});
   root.addEventListener("click", function(e){
     var b = e.target.closest("button"); if (!b || !root.contains(b) || b.closest(".prof")) return;
-    if (b.dataset.vue) setVue(b.dataset.vue);
+    if (b.dataset.vue){
+      /* Repliées, les vues ne montrent que l'active : la toucher déplie les deux autres. */
+      if (elVue.classList.contains("repli") && b.dataset.vue === st.vue){ elVue.classList.remove("repli"); return; }
+      elVue.classList.add("repli"); setVue(b.dataset.vue, st.cote);
+    }
+    else if (b.dataset.z){ var z = +b.dataset.z; if (z) eng && eng.zoomer(z > 0 ? 1 / 1.25 : 1.25, .2, 9); else cadrage(env.reduit ? 0 : .8); legendes(false); legendes(); }
     else if (b.dataset.o === "lbl"){ st.lbl = !st.lbl; syncUI(); legendes(); if (!tel()) cadrage(env.reduit ? 0 : .9); }
     else if (b.dataset.o === "grp") setGroupes(!st.grp);
     else if (b.dataset.o === "print"){ if (env.imprimer) env.imprimer(api); }
     else if (b.classList.contains("c3-x")) fermerFiche();
-    else if (b.dataset.fiche) env.fiche(b.dataset.fiche);
+    else if (b.dataset.fiche){ cacherMsg(); env.fiche(b.dataset.fiche); }
     else if (b.hasAttribute("data-isoler")) isoler();
     else if (b.dataset.k) choisir(+b.dataset.k);
     else if (b.hasAttribute("data-retry")) demarrer();
@@ -10686,6 +10888,7 @@ function monter(host, env){
         choisir(k);
       } return k >= 0; },
     structures: structures,
+    qPose: function(n, c){ return qPose(n, c || "R"); },
     listeDe: listeDe, disposer: disposer, reg: reg, cadre: cadre, cadrage: cadrage, theme: theme, nomPiece: nomPiece,
     pause: function(){ legendes(false); }, reprise: function(){ if (eng){ cadrage(0); eng.redessiner(); legendes(); } },
     detruire: function(){ mort = true; tIntro.forEach(clearTimeout); clearTimeout(tRegion); clearTimeout(lblT); clearTimeout(survolT); window.removeEventListener("resize", taille); if (RO) RO.disconnect(); if (prof) prof.fermer(); if (eng) eng.detruire(); eng = null; }
@@ -12046,10 +12249,13 @@ function storyArea(){
     var cap = $('.story-txt > div[data-s="' + Math.max(0, HOME.step) + '"]'), cb = cap ? parseFloat(getComputedStyle(cap).bottom) || 26 : 26;
     var top = cap ? hb - cb - cap.offsetHeight - 14 : hb * 0.6;
     top = Math.max(hb * 0.42, Math.min(hb * 0.66, top));
+    if (HOME.step >= 3 && $("#story.dir")) return {w: w, h: h, phone: true, box: [-w * .1, -8, w * 1.1, top + h * .08], lbl: [0, 0, w, top + 6]};
     return {w: w, h: h, phone: true, box: [0, 10, w, top], lbl: [0, 0, w, top + 6]};
   }
   var txt = $(".story-txt"), tr = txt ? txt.getBoundingClientRect().right - $(".story-stick").getBoundingClientRect().left : w * 0.4;
   var mid = w < 1000, x0 = Math.min(w * 0.5, tr + (mid ? 24 : 40));
+  /* Chapitres 04 à 06 : la planche agrandie, qui peut passer sous le texte (elle s'y efface en dégradé). */
+  if (HOME.step >= 3 && $("#story.dir")){ $(".story-stick").style.setProperty("--fx0", Math.round(tr + 4) + "px"); $(".story-stick").style.setProperty("--fx1", Math.round(tr + 110) + "px"); return {w: w, h: h, phone: false, mid: mid, box: [tr - 40, -h * .04, w - 12, hb + h * .2], lbl: [tr + 12, 0, w - (mid ? 22 : 64), hb]}; }
   return {w: w, h: h, phone: false, mid: mid, box: [x0, 26, w - (mid ? 28 : 70), hb - 30], lbl: [x0 - 10, 0, w - (mid ? 22 : 64), hb]};
 }
 function storyVB(s, A2){
@@ -12080,14 +12286,14 @@ function storyGo(i, first){
   var prev = HOME.step; HOME.step = i;
   var s = STORY[i], m = HOME.map, st0 = $("#story"), a3d = st0.classList.contains("a3d");
   st0.setAttribute("data-s", i);
-  var pose = function(){ m.svg.classList.toggle("pal-g", !!s.pal); if (m.view() !== s.v) m.setView(s.v); if (m.depth() !== s.d) m.setDepth(s.d);
-    var sm = $("#story-map").parentNode; sm.classList.toggle("papier", i === 2); sm.classList.toggle("duo", i === 1); };
-  var pousse = !first && prev >= 0 && !REDUCED;
-  if (!pousse) pose();
+  var pose = function(){ m.svg.classList.toggle("pal-g", !!s.pal); if (m.view() !== s.v) m.setView(s.v); if (m.depth() !== s.d) m.setDepth(s.d); };
+  /* Accueil continu : jusqu'au chapitre 04, le défilement pilote la planche (storyScrub) ; ensuite, recadrage. */
+  var dir = !!$("#story.dir"), pousse = false;
+  if (!dir || i >= 3) pose();
   $$(".story-txt > div").forEach(function(d){ var k = +d.dataset.s; d.classList.toggle("on", k === i); d.classList.toggle("gone", k < i); if (k === i) d.removeAttribute("aria-hidden"); else d.setAttribute("aria-hidden", "true"); });
   $$(".story-dots button").forEach(function(b){ b.classList.toggle("on", +b.dataset.sd === i); });
   $("#story").classList.toggle("past", i > 0);
-  if (pousse) storyPousse(i, prev, pose, a3d);
+  if (dir){ if (i >= 3) storyFrame(!first && prev >= 3); if (typeof storyScrub === "function") storyScrub(); }
   else storyFrame(!first && prev >= 0 && !(prev === 0 && a3d));
   c3AccueilGo(i);
 }
@@ -12112,13 +12318,14 @@ function storyInit(){
     var g = storyGeom(); if (!g || !g.h) return;
     var c = Math.floor((window.scrollY + window.innerHeight / 2 - g.top) / g.h);
     storyGo(Math.max(0, Math.min(g.n - 1, c)));
+    if (typeof storyScrub === "function") storyScrub();
   };
   var sraf = 0;
   __rt.on(window, "scroll", function(){ if (!sraf) sraf = requestAnimationFrame(function(){ sraf = 0; HOME.sync(); }); }, {passive: true});
   setTimeout(HOME.sync, 0);
   $(".story-dots").addEventListener("click", function(e){ var b = e.target.closest("[data-sd]"); if (b) storyStepTo(+b.dataset.sd); });
   storyPaging();
-  var rt; __rt.on(window, "resize", function(){ clearTimeout(rt); rt = setTimeout(function(){ if (curView === "accueil"){ HOME.sync(); storyFrame(false); } }, 140); });
+  var rt; __rt.on(window, "resize", function(){ clearTimeout(rt); rt = setTimeout(function(){ if (curView === "accueil"){ SC.cle = ""; HOME.sync(); if (HOME.step >= 3 || !$("#story.dir")) storyFrame(false); storyScrub(); } }, 140); });
 }
 
 /* Défilement planche par planche : un geste, même appuyé, n'avance que d'une étape, puis une courte pause
@@ -12136,7 +12343,7 @@ function storyStepTo(i){
   var g = storyGeom(); if (!g) return;
   i = Math.max(0, Math.min(g.n, i));
   SL.lock = Date.now() + (REDUCED ? 250 : 950);
-  window.scrollTo({top: Math.round(g.top + i * g.h), behavior: i < g.n || REDUCED ? "auto" : "smooth"});
+  window.scrollTo({top: Math.round(g.top + i * g.h), behavior: REDUCED ? "auto" : "smooth"});
 }
 function storyBusy(){ return curView !== "accueil" || !$("#sheet").hidden || !$("#menu").hidden || !$("#palette").hidden; }
 /* Étape visée selon le sens : depuis une planche posée, on avance d'une ; entre deux planches, on rejoint la plus proche dans le sens du geste. */
@@ -12144,6 +12351,8 @@ function storyNext(y, dir, g){ var c = (y - g.top) / g.h; return dir > 0 ? Math.
 /* Le récit mène le défilement de son début jusqu'à la première bande ; plus bas, la page défile librement. */
 function storyOwns(y, dir, g){ return dir > 0 ? y < g.exit - 2 : y > 2 && y <= g.exit + 2; }
 function storyPaging(){
+  /* Accueil continu : le défilement reste libre, l'animation le suit. */
+  if ($("#story.dir")) return;
   __rt.on(window, "wheel", function(e){
     if (storyBusy() || e.ctrlKey || Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
     var g = storyGeom(); if (!g) return;
@@ -14825,7 +15034,12 @@ function c3Ctx(cadrer){
   var list = V && V.structures ? V.structures() : [], r = V ? V.reg() : null, grp = V && V.etat.grp;
   c.innerHTML = '<p class="c3-aide">' + (EN ? "<b>Tap a muscle</b> to open its sheet: the view moves to its region. Drag to look around (up to 25°); Front, Side and Back change sides." : "<b>Touche un muscle</b> pour ouvrir sa fiche : la vue se place sur sa région. Glisse pour regarder autour (jusqu'à 25°) ; Face, Profil et Dos changent de côté.") + "</p>" +
     (list.length ? '<div class="c3-liste"><span class="eyebrow">' + esc(T("Dans cette vue")) + (r ? " · " + esc(T(r.n)) : "") + '</span><div class="chips">' + list.slice(0, 36).map(function(x){ return c3Chip(x.id); }).join("") + "</div></div>" : "") +
-    (grp ? '<div class="c3-leg">' + Object.keys(A.Map.GPAL).map(function(k){ return '<span><i class="sw" style="background:' + A.Map.GPAL[k][0] + '"></i>' + esc(T(GPAL_LBL[k] || k)) + "</span>"; }).join("") + "</div>" : "");
+    (grp ? (function(){
+      /* Comme sur la carte 2D : la légende des groupes présents dans la vue, sous la rubrique, pas sur le corps. */
+      var gs = {}; list.forEach(function(x){ var g = A.Map.GKEY[x.id]; if (g) gs[g] = 1; });
+      var ks = Object.keys(A.Map.GPAL).filter(function(k){ return gs[k]; }); if (!ks.length) ks = Object.keys(A.Map.GPAL);
+      return '<div class="c3-leg"><span class="eyebrow">' + esc(T("Groupes musculaires")) + '</span><div class="c3-leg-l">' + ks.map(function(k){ return '<span><i class="sw" style="background:' + A.Map.GPAL[k][0] + '"></i>' + esc(T(GPAL_LBL[k] || k)) + "</span>"; }).join("") + "</div></div>";
+    })() : "");
 }
 REFRESH.corps = function(){ if (C3.v){ C3.v.suspendre(false); C3.v.reprise(); } };
 LEAVE.corps = function(){ if (C3.v){ C3.v.pause(); C3.v.suspendre(true); } };
@@ -14861,20 +15075,22 @@ function c3Accueil(){
   env.etat = {c: 1, r: "", rendu: "nuit", lbl: false, pose: true, libre: c3Portrait()};
   /* Grand cadrage : sur ordinateur, à droite du texte, le buste déborde en bas ; sur téléphone, au-dessus du texte. */
   /* Mesures de mise en page (offsetTop, offsetLeft) : indépendantes des animations du texte. */
-  env.marges = function(w, h){
+  env.marges = C3.margesStory = function(w, h){
     var t = $('.story-txt > div[data-s="0"]'), tx = $(".story-txt"), ok = t && tx && t.offsetHeight;
     if (w < 761){ var top = ok ? tx.offsetTop + t.offsetTop : h * .5; return {l: -w * .2, r: -w * .2, t: h * .04, b: Math.max(h * .12, h - top - h * .3)}; }
     var l = ok ? tx.offsetLeft + t.offsetLeft + t.offsetWidth - 10 : w * .42;
     return {l: l, r: -w * .03, t: h * .03, b: -h * .24};
   };
-  env.pret = function(v){ C3.recitVu = true; st.classList.add("a3d-ok"); if (HOME.step > 0) v.suspendre(true); };
+  env.pret = function(v){ C3.recitVu = true; st.classList.add("a3d-ok"); SC.cam = null; SC.pause = false; storyScrub(); };
   env.erreur = function(){ st.classList.remove("a3d"); };
   C3.story = A.Vue3D.monter(box, env);
   var vo = document.createElement("i"); vo.className = "story-voile"; box.appendChild(vo);
-  var io = new IntersectionObserver(function(en){ if (C3.story) C3.story.suspendre(!en[0].isIntersecting || curView !== "accueil" || HOME.step > 0); }, {threshold: 0});
+  var io = new IntersectionObserver(function(en){ if (C3.story){ SC.pause = !en[0].isIntersecting || curView !== "accueil" || SC.P > 1.02; C3.story.suspendre(SC.pause); } }, {threshold: 0});
   io.observe(stick);
 }
 function c3AccueilGo(i){
+  /* Le défilement continu pilote la 3D de l'accueil (storyScrub) : rien à faire ici. */
+  if ($("#story.dir")) return;
   var v = C3.story; if (!v) return;
   clearTimeout(C3.tSus);
   if (i === 0) v.suspendre(false);
@@ -14929,6 +15145,130 @@ function storyPousse(i, prev, pose, a3d){
     if (HOME.pousse === L) HOME.pousse = null;
     if (HOME.step === i && i > 0) HOME.lbl.hide(false);
   };
+}
+/* ---------- Accueil : animation continue au défilement (chapitres 01 à 04) ----------
+   Comme sur les pages produit d'Apple, tout suit la position du défilement, à sa vitesse :
+   01 → 02  le corps 3D, vu de dos en noir et blanc, se retourne (travelling circulaire) et vient se placer exactement
+            comme la planche de l'épaule ; la planche, en gris, le relaie, puis elle et l'écran passent au rouge ;
+   02 → 03  la planche rouge glisse vers le cadrage du dos en se retournant (face, tranche, dos), le fond devient papier
+            et la planche grise ;
+   03 → 04  le dos gris s'efface, le papier s'éteint, la planche suivante apparaît.
+   Ensuite (04 à 06), le recadrage habituel. Les couleurs de la planche sont ses variables CSS, interpolées. */
+var SC = {cle: "", P: -1, vb: null, cam: null, vbCur: "", lblK: -2, pause: false};
+var PAL_V = ["mh", "ms", "ml", "bone", "bone-hi", "tendon", "tw", "lig", "cart", "fascia", "nerf", "st-skin", "neutre", "ink"];
+var PALS = {
+  normal: [3, 66, 40, "#e8dcc3", "#f7efdf", "#efe5cf", "#ece2cc", "#7fb4ea", "#b9a7e6", "#98a2ae", "#f5cd4f", "#2c2c31", "#2b2225", "#0c0909"],
+  gris:   [-4, 0, 40, "#d9d4cc", "#f4f1ec", "#c2bdb5", "#aea9a2", "#948f89", "#827e79", "#5f5b57", "#a19c96", "#252527", "#38383a", "#000000"],
+  duo:    [-4, 82, 17, "#e8131c", "#ff4040", "#c8101a", "#a20c15", "#8e0a12", "#7e0910", "#60070e", "#e8131c", "#1c0205", "#2e0409", "#070001"],
+  papier: [-4, 0, 24, "#f6f4f0", "#ffffff", "#dcd9d2", "#e4e1da", "#cfccc5", "#c9c7c1", "#bab7b1", "#8e8b86", "#2a2a2c", "#4a4a4c", "#0b0b0c"]
+};
+function scHex(a, b, t){ var A = parseInt(a.slice(1), 16), B = parseInt(b.slice(1), 16), c = function(sh){ var x = (A >> sh) & 255, y = (B >> sh) & 255; return Math.round(x + (y - x) * t); }; return "rgb(" + c(16) + "," + c(8) + "," + c(0) + ")"; }
+function scPal(el, a, b, t){
+  if (!a){ if (el.hasAttribute("data-pal")){ PAL_V.forEach(function(k){ el.style.removeProperty("--" + k); }); el.removeAttribute("data-pal"); } return; }
+  var A = PALS[a], B = PALS[b || a], cle = a + ">" + (b || a) + ":" + t.toFixed(3); if (el.getAttribute("data-pal") === cle) return; el.setAttribute("data-pal", cle);
+  PAL_V.forEach(function(k, i){ el.style.setProperty("--" + k, typeof A[i] === "number" ? (A[i] + (B[i] - A[i]) * t).toFixed(2) + (i ? "%" : "") : scHex(A[i], B[i], t)); });
+}
+function scLerp(a, b, t){ return a.map(function(v, i){ return v + (b[i] - v) * t; }); }
+/* Zone de dessin et cadrage de chaque chapitre (calculés comme si on y était). */
+function scArea(k){ var s0 = HOME.step; HOME.step = k; var a = storyArea(); HOME.step = s0; return a; }
+function scPrep(){
+  var host = $("#story-map"); if (!host || !host.clientWidth) return false;
+  var cle = host.clientWidth + "x" + host.clientHeight + (A.body2 === A.body2f ? "f" : "m");
+  if (SC.cle === cle && SC.vb) return true;
+  SC.cle = cle; SC.vb = []; SC.reg = []; SC.area = []; SC.cam = null; SC.vbCur = ""; SC.lblK = -1;
+  for (var k = 0; k < 4; k++){ var a = scArea(k), f = storyVB(STORY[k], a); SC.vb.push(f.vb); SC.reg.push(f.reg); SC.area.push(a); }
+  return true;
+}
+/* Les deux extrémités du mouvement 3D : la statue de dos, et le corps de face placé exactement sur la planche de
+   l'épaule (mêmes muscles, même rectangle à l'écran). */
+function scCam(){
+  var V = C3.story, E = V && V.eng, box = $(".story-3d"); if (!E || !SC.vb || !box) return null;
+  if (SC.cam) return SC.cam;
+  var w = box.clientWidth, h = box.clientHeight; if (!w || !h) return null;
+  var P0 = c3Portrait(), qA = V.qPose(P0.pose), qB = V.qPose("planche");
+  var bbA = E.boitePosee(qA, function(e){ return e.l >= 1; }, P0.bb) || P0.bb, mA = C3.margesStory ? C3.margesStory(w, h) : {l: 0, r: 0, t: 0, b: 0};
+  var ids = STORY[1].frame.ids, bbB = E.boitePosee(qB, function(e){ return e.s === "R" && ids.indexOf(e.a) >= 0; });
+  var vb = SC.vb[1], reg = SC.reg[1], sc = SC.area[1].w / vb[2];
+  var mB = {l: (reg[0] - vb[0]) * sc, r: w - (reg[2] - vb[0]) * sc, t: (reg[1] - vb[1]) * sc, b: h - (reg[3] - vb[1]) * sc};
+  SC.cam = {qA: qA, qB: qB, mA: mA, mB: mB, A: E.camPour(bbA, P0.yaw * Math.PI / 180, P0.pitch * Math.PI / 180, P0.k, mA), B: E.camPour(bbB, 0, 0, 1, mB)};
+  return SC.cam;
+}
+function scrub3D(u){
+  var c = scCam(); if (!c) return;
+  var cam = {}, mg = {};
+  ["yaw", "pitch", "dist", "tx", "ty", "tz"].forEach(function(k){ cam[k] = c.A[k] + (c.B[k] - c.A[k]) * u; });
+  cam.dist *= 1 + .14 * Math.sin(Math.PI * u);
+  ["l", "r", "t", "b"].forEach(function(k){ mg[k] = c.mA[k] + (c.mB[k] - c.mA[k]) * u; });
+  C3.story.eng.poserMelange(c.qA, c.qB, u); C3.story.eng.regler(cam, mg);
+}
+/* Calques de fond (rouge, papier) et lumière sur le papier, créés une fois. */
+function scFond(){
+  var stick = $(".story-stick"), sm = $("#story-map") && $("#story-map").parentNode; if (!stick || !sm) return;
+  if (!$(".story-fond", stick)){ var f = document.createElement("div"); f.className = "story-fond"; f.setAttribute("aria-hidden", "true"); f.innerHTML = '<i class="f-duo"></i><i class="f-pap"></i>'; stick.insertBefore(f, stick.firstChild); }
+  if (!$(".story-lum", stick)){ var l = document.createElement("i"); l.className = "story-lum"; l.setAttribute("aria-hidden", "true"); stick.insertBefore(l, sm.nextSibling);
+    var fz = document.createElement("i"); fz.className = "story-fade2"; fz.setAttribute("aria-hidden", "true"); stick.insertBefore(fz, l.nextSibling); }
+}
+function storyScrub(){
+  var st = $("#story.dir"); if (!st || !HOME.map || curView !== "accueil") return;
+  var g = storyGeom(); if (!g || !scPrep()) return;
+  scFond();
+  var P = Math.max(0, Math.min(g.n - 1, (window.scrollY - g.top) / g.h)); if (REDUCED) P = Math.round(P);
+  var cl = function(x){ return x < 0 ? 0 : x > 1 ? 1 : x; }, ea = function(x){ x = cl(x); return x * x * (3 - 2 * x); };
+  var m = HOME.map, host = $("#story-map"), sm = host.parentNode, d3 = $(".story-3d"), fd = $(".story-fond .f-duo"), fp = $(".story-fond .f-pap"), stick = $(".story-stick"), lum = $(".story-lum", stick), fad = $(".story-fade2", stick);
+  var a3d = st.classList.contains("a3d-ok") && C3.story && C3.story.eng;
+  SC.P = P;
+  if (C3.story){ var off = P > 1.02; if (off !== SC.pause){ SC.pause = off; C3.story.suspendre(off); } }
+  if (P > .05) m.svg.classList.remove("pop-in");
+  var o = 1, rot = 0, sca = 1, view = "face", depth = "sup", vb = null, pa = null, pb = null, pt = 0, duo = 0, pap = 0, fade = 0, sansPlanche = false;
+  if (P >= 3){
+    /* 04 à 06 : la planche en couleurs, au recadrage habituel. */
+    if (d3){ d3.style.opacity = "0"; d3.style.visibility = "hidden"; }
+    sm.style.opacity = ""; sm.style.transform = ""; scPal(sm, null); fd.style.opacity = "0"; fp.style.opacity = "0"; lum.style.opacity = "0"; fad.style.opacity = "0";
+    stick.style.setProperty("--bg", "#000"); SC.vbCur = "";
+    /* Arrivée en 04 d'un grand saut : les légendes du chapitre affiché. */
+    if (SC.lblK !== HOME.step && HOME.step >= 3){ SC.lblK = HOME.step; var a4 = storyArea(); storyLabels(STORY[HOME.step], a4, storyVB(STORY[HOME.step], a4).reg); HOME.lbl.hide(false); }
+    return;
+  }
+  if (P < 1){
+    if (a3d){
+      var x3 = cl((P - .62) / .16);
+      scrub3D(ea(P / .62));
+      d3.style.opacity = String(1 - x3); d3.style.visibility = x3 < 1 ? "visible" : "hidden";
+      vb = SC.vb[1]; o = x3; sansPlanche = x3 <= 0; pa = "gris"; pb = "duo"; pt = ea((P - .8) / .2); duo = pt;
+    } else {
+      if (d3) d3.style.visibility = "hidden";
+      vb = scLerp(SC.vb[0], SC.vb[1], ea(P)); pa = "normal"; pb = "duo"; pt = ea((P - .45) / .55); duo = pt;
+    }
+  } else if (P < 2){
+    if (d3){ d3.style.opacity = "0"; d3.style.visibility = "hidden"; }
+    var t = ea(P - 1), an = t * 180;
+    vb = scLerp(SC.vb[1], SC.vb[2], t);
+    if (an < 90){ rot = an; } else { view = "dos"; rot = an - 180; }
+    var tc = ea((t - .38) / .24); pa = "duo"; pb = "papier"; pt = tc; duo = 1 - tc; pap = tc; fade = ea((t - .5) / .5);
+  } else {
+    if (d3){ d3.style.opacity = "0"; d3.style.visibility = "hidden"; }
+    var t2 = P - 2;
+    if (t2 < .5){ var u = ea(t2 / .42); view = "dos"; vb = SC.vb[2]; o = 1 - u; sca = 1 - .05 * u; pa = "papier"; fade = 1 - u; }
+    else { var u2 = ea((t2 - .55) / .4); view = STORY[3].v; depth = STORY[3].d; vb = SC.vb[3]; o = u2; sca = 1.05 - .05 * u2; }
+    pap = 1 - ea((t2 - .1) / .5);
+  }
+  if (m.view() !== view) m.setView(view);
+  if (m.depth() !== depth) m.setDepth(depth);
+  m.svg.classList.remove("pal-g");
+  if (vb){ var vk = vb.map(function(x){ return x.toFixed(2); }).join(); if (vk !== SC.vbCur){ SC.vbCur = vk; m.frameTo(vb, 0); } }
+  /* Le retournement pivote autour de l'axe du corps (milieu de la planche), pas du milieu de l'écran. */
+  var sc0 = vb ? host.clientWidth / vb[2] : 1, ox = vb ? (200 - vb[0]) * sc0 : host.clientWidth / 2;
+  sm.style.transformOrigin = ox.toFixed(1) + "px 50%";
+  sm.style.transform = rot || sca !== 1 ? "perspective(1700px) rotateY(" + rot.toFixed(2) + "deg) scale(" + sca.toFixed(4) + ")" : "";
+  sm.style.opacity = sansPlanche ? "0" : o.toFixed(3);
+  scPal(sm, pa, pb, pt);
+  sm.classList.toggle("sc-pap", pap > .5); sm.classList.toggle("sc-duo", pap <= .5 && duo > .5);
+  fd.style.opacity = duo.toFixed(3); fp.style.opacity = pap.toFixed(3); lum.style.opacity = (pap * o).toFixed(3); fad.style.opacity = (fade * (pap > .5 ? 1 : pap * 2)).toFixed(3);
+  stick.style.setProperty("--bg", pap > 0 ? scHex("#3e050a", "#ebe8e1", pap) : scHex("#000000", "#3e050a", duo));
+  /* Légendes : seulement quand une planche est posée (à moins de 7 % d'un chapitre), celles de ce chapitre. */
+  var kN = Math.round(P), pose = Math.abs(P - kN) < .07 && o > .95 && !rot && !(kN === 0 && a3d);
+  if (pose && kN !== SC.lblK){ SC.lblK = kN; storyLabels(STORY[kN], SC.area[kN], SC.reg[kN]); HOME.lbl.hide(false); }
+  else if (!pose){ SC.lblK = -1; HOME.lbl.hide(true); }
 }
 /* ---------- Cartes à imprimer : complète (légendée) ou muette (à remplir) ---------- */
 var C3P = {type: "complete", url: null};
