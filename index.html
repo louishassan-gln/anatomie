@@ -12,7 +12,7 @@
 <meta name="description" content="Atlas d'anatomie fonctionnelle pour la musculation : planches illustrées et légendées, muscles animés, biomécanique interactive et 112 exercices, avec les sources de chaque repère.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wdth,wght@0,75..100,400..700;1,75..100,400..700&family=Instrument+Serif:ital@0;1&family=Inter:wght@400..700&family=Inter+Tight:wght@600..900&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wdth,wght@0,75..100,400..700;1,75..100,400..700&family=Instrument+Serif:ital@0;1&family=Inter:wght@400..700&display=swap">
 <style>
 /* Anatomie — planche d'anatomie illustrée (contours d'encre, aplats, reflets) posée dans une mise en page de fiche produit.
    Pas de cadres : des bandes pleine largeur, des filets fins, des illustrations posées sur la page.
@@ -1656,7 +1656,7 @@ body.pod-on .brand{display:none}
 .c3-regs button:hover{color:var(--fg)}
 .c3-regs button[aria-pressed="true"]{border-color:var(--fg); color:var(--fg); background:rgba(255,255,255,.09)}
 .c3-clair .c3-regs button{background:rgba(255,255,255,.5)} .c3-clair .c3-regs button[aria-pressed="true"]{background:rgba(0,0,0,.06)}
-.c3-fiche{position:absolute; z-index:6; right:20px; bottom:calc(var(--bot, 80px) + 56px); width:min(330px, calc(100% - 40px)); padding:18px 20px; border-radius:20px; border:1px solid var(--glass-line); -webkit-user-select:text; user-select:text; animation:c3In .45s var(--spring) both}
+.c3-fiche{position:absolute; z-index:6; right:20px; bottom:calc(var(--bot, 80px) + 56px); width:min(330px, calc(100% - 40px)); padding:18px 20px; border-radius:20px; border:1px solid var(--glass-line); -webkit-user-select:text; user-select:text; }
 @keyframes c3In{from{opacity:0; transform:translateY(10px)}}
 .c3-fiche h2{font:600 21px/1.15 var(--f-display); letter-spacing:-.015em; margin:4px 30px 4px 0; color:var(--fg)}
 .c3-fiche .latin{margin:0 0 6px; font-size:16.5px}
@@ -1715,10 +1715,7 @@ body.pod-on .brand{display:none}
 .c3-nu .c3-coin,.c3-rec{display:none}
 @media (max-width: 759px){ .c3-coin{display:none} }
 
-/* Récit de l'accueil en 3D, et carte à imprimer */
-.story-3d{position:absolute; inset:0; pointer-events:none}
-.story:not(.en3d) .story-3d{visibility:hidden}
-.story.en3d .story-stick{background:#000}
+/* Carte à imprimer */
 .c3p-prev{margin-top:16px; border:1px solid var(--line-2); border-radius:12px; overflow:hidden; background:#fff; min-height:140px; display:grid; place-items:center}
 .c3p-prev img{display:block; width:100%; height:auto; -webkit-touch-callout:default}
 .c3p-prev p{padding:28px; margin:0; color:#6e6e73}
@@ -1735,12 +1732,11 @@ body[data-view="corps"] #main{padding:0}
 
 /* ================= Direction artistique ATLAS =================
    Une app de sport : noir profond, blanc franc, et une seule couleur vive, le rouge du muscle, qui relie le logo,
-   les planches 2D et le corps 3D. Police : Inter Tight pour les titres (gras, serrés), Inter pour le texte.
+   les planches 2D et le corps 3D. Titres dans la police d'origine du site (SF Pro Display, gras), texte en Inter.
    Boutons pleins, arrondis, sans contour : blanc pour l'action principale, gris profond pour le reste.
    Les schémas 2D gardent leurs couleurs. Ce fichier ne change que l'apparence : l'organisation du site ne bouge pas. */
 :root,:root[data-theme="dark"],:root[data-theme="light"]{
   --f-sans:"Inter",-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Helvetica,Arial,sans-serif;
-  --f-display:"Inter Tight","Inter",-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Helvetica,Arial,sans-serif;
   --accent:#f5f5f7; --accent-2:#ffffff; --accent-ink:#000000; --accent-soft:rgba(255,255,255,.14);
   --red-text:#ff453a;
   --bg:#000000; --bg-2:#0b0b0c; --surface:#121214; --surface-2:#1c1c1e; --surface-3:#2a2a2d; --surface-hi:#3a3a3d;
@@ -1753,11 +1749,11 @@ html,body{background:#000}
 body{letter-spacing:-.006em}
 
 /* ---------- Typographie ---------- */
-h1,h2,h3,h4{font-family:var(--f-display); font-weight:800; letter-spacing:-.028em}
+h1,h2,h3,h4{font-family:var(--f-display); font-weight:700; letter-spacing:-.03em}
 .page-head h1{font-size:clamp(46px, 6.6vw, 92px); letter-spacing:-.04em; line-height:.98}
 .sec-h{font-size:clamp(36px, 5vw, 68px); letter-spacing:-.035em; line-height:1.02}
 .side-h h1{font-size:36px; letter-spacing:-.045em}
-.menu-list .m-t{font-family:var(--f-display); font-weight:800; font-size:clamp(38px, min(5vw, 6.8vh), 66px); letter-spacing:-.035em; line-height:1.02}
+.menu-list .m-t{font-family:var(--f-display); font-weight:700; font-size:clamp(38px, min(5vw, 6.8vh), 66px); letter-spacing:-.035em; line-height:1.02}
 .sheet-head h2{letter-spacing:-.03em}
 .kicker,.eyebrow{font-family:var(--f-sans); font-size:12px; font-weight:600; letter-spacing:.08em; text-transform:uppercase}
 .plate-no{font-family:var(--f-sans); font-style:normal; font-weight:700; font-size:1em; letter-spacing:.08em; text-transform:uppercase}
@@ -1795,8 +1791,8 @@ input[type="search"],input[type="text"],input[type="number"],select,textarea{bor
 .tabs .ind{background:var(--red-text); height:3px; border-radius:0}
 .tabs [aria-selected="true"],.tabs [aria-pressed="true"],.tabs [aria-current="true"]{color:var(--fg); font-weight:700}
 .dock{border:0; border-radius:20px; background:rgba(16,16,18,.92); box-shadow:0 18px 50px rgba(0,0,0,.6)}
-.dock-t{font-family:var(--f-display); font-weight:700; letter-spacing:-.02em; font-size:15.5px}
-.brand .brand-t{font-family:var(--f-display); font-weight:900; text-transform:uppercase; letter-spacing:.04em; font-size:16px}
+.dock-t{font-family:var(--f-display); font-weight:600; letter-spacing:-.01em; font-size:15.5px}
+.brand .brand-t{font-family:var(--f-display); font-weight:800; text-transform:uppercase; letter-spacing:.03em; font-size:16px}
 .sheet{border-radius:0}
 .pal-box{border-radius:var(--r-l)}
 
@@ -1828,46 +1824,28 @@ input[type="search"],input[type="text"],input[type="number"],select,textarea{bor
 @keyframes c3NomSur{from{opacity:0} to{opacity:1; transform:translateY(-100%)}}
 @media (prefers-reduced-motion: reduce){ .c3-fil path,.c3-fil circle,.c3-noms button{animation:none; opacity:1; stroke-dashoffset:0} }
 
-/* ================= Accueil : six chapitres =================
-   La 3D (chapitres I, III, V) et les planches 2D (II, IV, VI) alternent, avec le texte de l'autre côté. Un volet
-   balaie l'écran d'un chapitre à l'autre ; au-dessus du titre, le numéro du chapitre en grand, au trait. */
-.story.en3d .story-stick{background:#000}
-.story.en3d .story-map .map.lay{background:radial-gradient(ellipse 52% 68% at 30% 50%, #141416, #000 74%)}
-.story.en3d .lay{z-index:1; clip-path:inset(0 0 0 100%); transition:clip-path 0s .95s}
-.story.en3d.retour .lay{clip-path:inset(0 100% 0 0)}
-.story.en3d .lay.on{z-index:2; clip-path:inset(0 0 0 0); transition:clip-path .95s cubic-bezier(.76,0,.18,1)}
-@media (prefers-reduced-motion: reduce){ .story.en3d .lay,.story.en3d .lay.on{transition:none} }
-.story.en3d .scroll-hint{display:none}
-.story.en3d .story-txt > div::before{content:attr(data-n); display:block; font-family:var(--f-display); font-weight:800; font-size:clamp(64px, calc(8 * var(--aw, 1vw)), 120px); line-height:.8; letter-spacing:-.05em; color:transparent; -webkit-text-stroke:1.2px rgba(255,255,255,.34); margin-bottom:18px}
-.story.en3d .story-txt > div[data-s="0"]::before{display:none}
-.story.en3d .story-txt h1{font-size:clamp(88px, calc(13 * var(--aw, 1vw)), 200px); line-height:.82; letter-spacing:-.045em; text-transform:uppercase; margin-bottom:24px}
-.story.en3d .story-txt h2{font-size:clamp(38px, calc(4.4 * var(--aw, 1vw)), 60px); line-height:1.02; letter-spacing:-.032em; margin-bottom:18px}
-.story.en3d .story-txt p{color:#b6b6ba}
-.story .hero-chiffres{display:flex; gap:clamp(18px, 2.6vw, 38px); list-style:none; margin:30px 0 0; padding:22px 0 0; border-top:1px solid rgba(255,255,255,.12)}
+/* ================= Accueil : planches 2D, texte en chapitres =================
+   L'organisation d'origine : la planche de la carte à droite, cadrée selon la morphologie choisie, le texte à gauche.
+   Au-dessus de chaque titre, le numéro du chapitre en grand, au trait ; au chapitre 01, le nom et trois chiffres. */
+.story .story-stick{background:radial-gradient(ellipse 58% 70% at 68% 48%, #151517, #000 74%)}
+.story .scroll-hint{font-weight:600; letter-spacing:.08em; text-transform:uppercase; font-size:11px}
+.story .story-txt > div::before{content:attr(data-n); display:block; font-family:var(--f-display); font-weight:700; font-size:clamp(58px, calc(6.6 * var(--aw, 1vw)), 100px); line-height:.8; letter-spacing:-.04em; color:transparent; -webkit-text-stroke:1.2px rgba(255,255,255,.34); margin-bottom:16px}
+.story .story-txt > div[data-s="0"]::before{display:none}
+.story .story-txt h1{font-size:clamp(76px, calc(9.4 * var(--aw, 1vw)), 148px); line-height:.86; letter-spacing:-.055em; text-transform:uppercase; margin-bottom:22px}
+.story .story-txt h2{font-size:clamp(36px, calc(4 * var(--aw, 1vw)), 56px); line-height:1.02; letter-spacing:-.04em; margin-bottom:16px}
+.story .story-txt p{color:#b6b6ba}
+.story .hero-chiffres{display:flex; gap:clamp(18px, 2.4vw, 34px); list-style:none; margin:28px 0 0; padding:20px 0 0; border-top:1px solid rgba(255,255,255,.12)}
 .story .hero-chiffres li{display:flex; flex-direction:column; gap:2px}
-.story .hero-chiffres b{font-family:var(--f-display); font-weight:800; font-size:clamp(28px, 2.6vw, 38px); letter-spacing:-.04em; line-height:1}
+.story .hero-chiffres b{font-family:var(--f-display); font-weight:700; font-size:clamp(26px, 2.4vw, 36px); letter-spacing:-.035em; line-height:1}
 .story .hero-chiffres span{font-size:13px; color:var(--fg-3)}
-/* Progression : une ligne de segments en bas de la scène. */
-.story.en3d .story-dots{top:auto; bottom:22px; left:50%; right:auto; transform:translateX(-50%); flex-direction:row; gap:6px}
-.story.en3d .story-dots button{width:26px; height:3px; border-radius:0; background:rgba(255,255,255,.22); transition:width .5s var(--ease), background .3s}
-.story.en3d .story-dots button.on{width:52px; height:3px; background:var(--red-text)}
-.story.en3d .story-dots button::before{margin:-12px -2px; width:auto; height:27px}
-@media (min-width: 761px) and (min-height: 501px){
-  /* Le texte change de côté à chaque chapitre ; chaque bloc a sa place, ils ne sautent pas. */
-  .story.en3d .story-txt{left:max(var(--gut), calc((100 * var(--aw) - var(--maxw)) / 2 + 20px)); right:max(var(--gut-r), calc((100 * var(--aw) - var(--maxw)) / 2 + 20px)); width:auto}
-  .story.en3d .story-txt > div{width:min(440px, calc(36 * var(--aw)))}
-  .story.en3d .story-txt > div[data-s="1"],.story.en3d .story-txt > div[data-s="3"],.story.en3d .story-txt > div[data-s="5"]{left:auto; right:0}
-  .story.en3d .story-txt > div[data-s="0"]{width:min(560px, calc(42 * var(--aw)))}
-}
 @media (max-width: 760px){
-  .story.en3d .story-map .map.lay{background:radial-gradient(ellipse 80% 55% at 50% 36%, #141416, #000 76%)}
-  .story.en3d .story-txt > div::before{font-size:54px; margin-bottom:10px; -webkit-text-stroke-width:1px}
-  .story.en3d .story-txt h1{font-size:clamp(72px, 24vw, 112px)}
-  .story.en3d .story-txt h2{font-size:clamp(32px, 9.6vw, 44px)}
-  .story .hero-chiffres{margin-top:18px; padding-top:14px; gap:22px}
-  .story .hero-chiffres b{font-size:26px}
-  .story.en3d .story-dots{bottom:auto; top:14px}
+  .story .story-txt > div::before{font-size:48px; margin-bottom:8px; -webkit-text-stroke-width:1px}
+  .story .story-txt h1{font-size:clamp(64px, 20vw, 96px)}
+  .story .story-txt h2{font-size:clamp(30px, 9vw, 40px)}
+  .story .hero-chiffres{margin-top:16px; padding-top:12px; gap:22px}
+  .story .hero-chiffres b{font-size:24px}
 }
+@media (max-height: 500px){ .story .story-txt > div::before{display:none} .story .hero-chiffres{display:none} }
 </style>
 <svg class="defs" aria-hidden="true" focusable="false">
   <defs>
@@ -9575,7 +9553,7 @@ function creer(canvas, data, opt){
   function cible(w, h){
     if (w === FW && h === FH) return; FW = w; FH = h;
     /* Grande image (téléphone en pleine densité) : 2 échantillons suffisent et ménagent la mémoire. */
-    SAMPLES = MSKO ? 0 : Math.min(MAXS, w * h > 2.6e6 ? 2 : 4);
+    SAMPLES = MSKO ? 0 : Math.min(MAXS, w * h > 4.4e6 ? 2 : 4);
     tex2d(tC, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, w, h, gl.LINEAR); tex2d(tA, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, w, h, gl.NEAREST); tex2d(tD, gl.DEPTH_COMPONENT24, gl.DEPTH_COMPONENT, gl.UNSIGNED_INT, w, h, gl.NEAREST);
     gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tC, 0); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT1, gl.TEXTURE_2D, tA, 0); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, tD, 0);
@@ -9775,7 +9753,11 @@ function creer(canvas, data, opt){
     gl.uniform3fv(u.uBg0, hex(S.capW && st.clair ? "#ffffff" : st.bg0)); gl.uniform3fv(u.uBg1, hex(S.capW && st.clair ? "#ffffff" : st.bg1)); gl.uniform3fv(u.uInk, hex(st.ink));
     var w = dimW(), h = dimH(), mg = S.marge, sp = S.spot || {};
     gl.uniform4f(u.uSpot, sp.x != null ? sp.x : .5 + (mg.l - mg.r) / w / 2, sp.y != null ? sp.y : .52 + (mg.b - mg.t) / h / 2, sp.r || .42, 0);
-    gl.uniform1f(u.uXf, xf); gl.uniform1f(u.uLw, sc * (st.clean ? 1.15 : 1.25));
+    gl.uniform1f(u.uXf, xf);
+    /* Traits proportionnés à la taille du corps à l'écran : quand on dézoome, ils s'affinent au lieu d'empâter le
+       dessin ; ils ne descendent jamais sous un pixel de l'écran. */
+    var ppm = (S.capH || canvas.clientHeight || 1) / (2 * Math.tan(FOV / 2) * Math.max(.3, S.cam.dist)), fz = Math.max(.42, Math.min(1.1, ppm / 620));
+    gl.uniform1f(u.uLw, Math.max(1, sc * (st.clean ? 1.15 : 1.25) * fz));
     gl.drawArrays(gl.TRIANGLES, 0, 3); gl.bindVertexArray(null);
   }
   function rendre(){
@@ -9948,34 +9930,32 @@ var COUCHES = [
 ];
 /* Régions : boîte gardée nette (repère du corps au repos, en mètres), angle de vue, pose. Côté droit pour les membres. */
 var REG = [
-  {id: "", n: "Corps entier", yaw: -10, pitch: -2, k: 1.03, pose: "planche"},
+  {id: "", n: "Corps entier", yaw: 0, pitch: 0, k: 1.03, pose: "planche"},
   {id: "tete_cou", n: "Tête et cou", box: [[-.2, 1.37, -.24], [.2, 1.76, .24]], yaw: 34, pitch: 2, k: 1.04, pose: "cou"},
-  {id: "epaule_bras", n: "Épaule et bras", box: [[-.4, 1.02, -.24], [-.01, 1.52, .24]], yaw: -38, pitch: 6, k: .95, pose: "bras", cote: "R"},
-  {id: "avantbras_main", n: "Avant-bras et main", box: [[-.44, .6, -.24], [-.12, 1.18, .24]], yaw: -42, pitch: 8, k: .96, pose: "avantbras", cote: "R"},
-  {id: "torse", n: "Torse", box: [[-.3, .85, -.26], [.3, 1.48, .26]], yaw: 18, pitch: -6, k: .98, pose: "torse"},
-  {id: "dos", n: "Dos", box: [[-.3, .85, -.26], [.3, 1.48, .26]], yaw: 160, pitch: 2, k: 1, pose: "dos"},
-  {id: "bassin_hanche", n: "Bassin et hanche", box: [[-.23, .68, -.26], [.23, 1.09, .26]], yaw: 200, pitch: 4, k: .98, pose: "hanche"},
-  {id: "cuisse_genou", n: "Cuisse et genou", box: [[-.25, .33, -.26], [.005, 1.0, .26]], yaw: -32, pitch: 6, k: .95, pose: "cuisse", cote: "R"},
-  {id: "jambe_pied", n: "Jambe et pied", box: [[-.23, -.03, -.26], [.005, .53, .28]], yaw: 210, pitch: 10, k: .98, pose: "jambe", cote: "R"}
+  {id: "epaule_bras", n: "Épaule et bras", box: [[-.38, 1.0, -.2], [-.04, 1.52, .2]], yaw: -28, pitch: 4, k: 1.25, pose: "bras", cote: "R", membre: 1},
+  {id: "avantbras_main", n: "Avant-bras et main", box: [[-.44, .66, -.22], [-.12, 1.16, .22]], yaw: -34, pitch: 6, k: 1.3, pose: "bras", cote: "R", membre: 1},
+  {id: "torse", n: "Torse", box: [[-.3, .85, -.26], [.3, 1.48, .26]], yaw: 18, pitch: -6, k: .98, pose: "athlete"},
+  {id: "dos", n: "Dos", box: [[-.3, .85, -.26], [.3, 1.48, .26]], yaw: 162, pitch: 0, k: 1, pose: "athlete"},
+  {id: "bassin_hanche", n: "Bassin et hanche", box: [[-.23, .68, -.26], [.23, 1.09, .26]], yaw: 200, pitch: 2, k: .98, pose: "athlete"},
+  {id: "cuisse_genou", n: "Cuisse et genou", box: [[-.25, .33, -.26], [.005, 1.0, .26]], yaw: -30, pitch: 4, k: .98, pose: "athlete", cote: "R"},
+  {id: "jambe_pied", n: "Jambe et pied", box: [[-.23, -.03, -.26], [.005, .53, .28]], yaw: 206, pitch: 6, k: 1, pose: "athlete", cote: "R"}
 ];
 var REGK = {tete_cou: 0, epaule_bras: 1, avantbras_main: 2, torse: 3, dos: 4, bassin_hanche: 5, cuisse_genou: 6, jambe_pied: 7};
-/* Poses : par segment, [flexion, abduction ou inclinaison, rotation] en degrés, au sens anatomique. Volontairement
-   sobres : le corps tient debout, bras décollés, poids sur une jambe ; aucune articulation n'est poussée loin. */
+/* Poses : par segment, [flexion, abduction ou inclinaison, rotation] en degrés, au sens anatomique. Une attitude
+   d'athlète au repos, celle d'un mannequin de vêtements de sport : poids sur la jambe droite, genou gauche relâché,
+   buste légèrement tourné, bras relâchés et décollés du corps. Le modèle se déforme mal au-delà : pas de mains sur les
+   hanches ni de bras levés. */
+var ATHLETE = {bassin: [0, 4, -4], lombaire: [0, -2, 3], thorax: [-3, -3, 6], cou: [0, 1, -4], tete: [-3, 0, -10],
+  cuisseR: [-2, 2, 0], cuisseL: [6, 7, 10], jambeL: [12, 0, 0], piedL: [4, 0, 0],
+  brasR: [-6, 13, -8], avantbrasR: [16, 0, 0], brasL: [-4, 11, -6], avantbrasL: [12, 0, 0]};
+function variante(o){ var r = {}; Object.keys(ATHLETE).forEach(function(k){ r[k] = ATHLETE[k]; }); Object.keys(o).forEach(function(k){ r[k] = o[k]; }); return r; }
 var POSES = {
   /* Planche : la position des planches 2D, debout, bras à peine décollés du corps. */
   planche: {brasR: [0, 9, 0], brasL: [0, 9, 0], avantbrasR: [5, 0, 0], avantbrasL: [5, 0, 0]},
-  heros: {bassin: [0, 3, -3], lombaire: [0, -2, 2], thorax: [-3, -2, 5], cou: [0, 0, 5], tete: [-2, 0, 12],
-    brasR: [-3, 13, -22], avantbrasR: [16, 0, -42], mainR: [6, 0, 0], brasL: [-3, 13, -22], avantbrasL: [18, 0, -42], mainL: [6, 0, 0],
-    cuisseR: [-2, 3, 4], cuisseL: [8, 6, 10], jambeL: [14, 0, 0], piedL: [6, 0, 0]},
-  cou: {tete: [-4, 6, 30], cou: [0, 3, 12], thorax: [0, 0, -4]},
-  bras: {brasR: [6, 22, -10], avantbrasR: [32, 0, -30], mainR: [8, 0, 0], tete: [0, 0, -12]},
-  avantbras: {brasR: [10, 16, -10], avantbrasR: [46, 0, -55], mainR: [-8, 0, 0]},
-  torse: {bassin: [0, 3, -3], lombaire: [0, -2, 2], thorax: [-4, -2, 5], cou: [0, 0, -5], tete: [-2, 0, -14],
-    brasR: [-8, 24, -14], avantbrasR: [22, 0, -36], brasL: [-5, 19, -14], avantbrasL: [24, 0, -36], cuisseL: [8, 6, 10], jambeL: [14, 0, 0]},
-  dos: {thorax: [-4, 0, 0], tete: [4, 0, 12], brasR: [-6, 21, -22], avantbrasR: [24, 0, -40], brasL: [-6, 21, -22], avantbrasL: [24, 0, -40]},
-  hanche: {bassin: [0, 4, 0], lombaire: [0, -3, 0], thorax: [0, -3, 0], cuisseL: [18, 5, 8], jambeL: [28, 0, 0], piedL: [12, 0, 0]},
-  cuisse: {cuisseR: [18, 4, 4], jambeR: [26, 0, 0], piedR: [6, 0, 0]},
-  jambe: {cuisseR: [4, 0, 0], jambeR: [6, 0, 0], piedR: [24, 0, 0]}
+  athlete: ATHLETE,
+  /* Bras droit un peu plus écarté et coude un peu fléchi : le bras se détache du tronc. */
+  bras: variante({brasR: [-4, 21, -10], avantbrasR: [24, 0, 0], tete: [-3, 0, -18]}),
+  cou: {tete: [-4, 6, 30], cou: [0, 3, 12], thorax: [0, 0, -4]}
 };
 function qPose(nom){
   var p = POSES[nom]; if (!p) return null; var q = {}, C = A.C3D;
@@ -10008,7 +9988,7 @@ function charger(urls){
 }
 
 function monter(host, env){
-  var T = env.T, esc = env.esc, st = Object.assign({c: 1, r: "", rendu: "planche", lbl: false, pose: true, sel: null, vue: -20}, env.etat || {});
+  var T = env.T, esc = env.esc, st = Object.assign({c: 1, r: "", rendu: "planche", lbl: false, pose: true, sel: null, vue: 0}, env.etat || {});
   if (!COUCHES[st.c - 1]) st.c = 1;
   st.pose = true;
   if (!RENDUS.some(function(x){ return x[0] === st.rendu; })) st.rendu = "planche";
@@ -10060,14 +10040,9 @@ function monter(host, env){
 
   /* ---------- Région, couche, pose ---------- */
   function reg(){ return REG.filter(function(r){ return r.id === st.r; })[0] || REG[0]; }
-  function filtre(){
-    var r = reg(); if (st.libre) return st.libre.filtre || null;
-    /* Cuisse, jambe : une seule jambe, et pas de bras ni de mains qui pendraient dans le cadre. */
-    if (r.id === "cuisse_genou" || r.id === "jambe_pied") return function(e){ return !(e.s === "L" && (e.r0 === 6 || e.r0 === 7)) && e.r0 !== 1 && e.r0 !== 2; };
-    return null;
-  }
+  function filtre(){ return st.libre && st.libre.filtre || null; }
   /* Ce qu'on cadre : la boîte de la région (une fois posée s'il y a une pose) et l'angle de vue. */
-  function cadre(){
+  function cadre(tout){
     var L = st.libre;
     if (L){
       var lb = L.bb; if (st.pose && L.pose){ var lp = eng.boitePosee(qPose(L.pose), function(e){ return e.l >= st.c; }, L.bb); if (lp) lb = lp; }
@@ -10075,7 +10050,9 @@ function monter(host, env){
     }
     var r = reg(), yaw = (r.id ? r.yaw : st.vue) * Math.PI / 180, bb = r.box || [[-.34, 0, -.15], [.34, 1.72, .15]];
     if (!r.id && tel()) bb = [[-.3, 0, -.15], [.3, 1.72, .15]];
-    if (st.pose && r.pose){ var f = filtre(), bp = eng.boitePosee(qPose(r.pose), function(e){ return !f || f(e); }, r.box || null); if (bp) bb = bp; }
+    /* On cadre ce que la boîte de la région contient une fois posé ; pour le bras et l'avant-bras, seulement les pièces
+       du membre, sinon la hanche voisine décentrerait le cadre. Tout le corps reste affiché. */
+    if (st.pose && r.pose){ var kr = r.membre && !tout ? REGK[r.id] : null, bp = eng.boitePosee(qPose(r.pose), function(e){ if (kr == null) return true; if (r.cote && e.s && e.s !== r.cote) return false; return e.r0 === kr; }, r.box || null); if (bp) bb = bp; }
     return {bb: bb, yaw: yaw, pitch: (r.pitch || 0) * Math.PI / 180, serre: r.k * (st.pose && r.pose && r.id ? .9 : 1)};
   }
   function cadrage(duree){
@@ -10103,9 +10080,12 @@ function monter(host, env){
   function choisir(k){
     if (!eng) return;
     if (k < 0){ fermerFiche(); return; }
-    var e = eng.els[k]; st.sel = k;
+    var e = eng.els[k], avait = !elFiche.hidden && st.sel != null && st.sel !== k; st.sel = k;
     var meme = e.a ? function(x){ return x.a === e.a; } : function(x, i){ return i === k; };
     eng.selection(meme, true);
+    /* Une structure qui a sa fiche : la fiche complète s'ouvre aussitôt (comme sur la carte) ; un autre muscle la
+       remplace. Les autres pièces gardent le petit panneau. */
+    if (e.a && env.fiche && !env.nu){ if (!elFiche.hidden) elFiche.hidden = true; env.fiche(e.a); legendes(); return; }
     var o = e.a ? env.nom(e.a) : null, cats = ["Peau", "Muscle", "Tissu conjonctif", "Cartilage", "Os"];
     elFiche.innerHTML = '<button type="button" class="c3-x" aria-label="' + esc(T("Fermer")) + '">' + IC.x + "</button>" +
       '<span class="kicker red">' + esc(T(cats[e.c])) + " · " + esc(T(couche(e.l)[0])) + "</span>" +
@@ -10115,8 +10095,18 @@ function monter(host, env){
       (e.f ? '<p class="c3-fam">' + esc(T("Pièce reconstruite pour l'atlas : absente du modèle d'origine.")) + "</p>" : "") +
       '<div class="c3-act">' + (e.a ? '<button type="button" class="btn sm" data-fiche="' + esc(e.a) + '">' + esc(T("Ouvrir la fiche")) + "</button>" : "") + '<button type="button" class="btn sm ghost" data-isoler>' + esc(T(st.iso ? "Tout afficher" : "Isoler")) + "</button></div>";
     elFiche.hidden = false; legendes();
+    if (!env.reduit && elFiche.animate){
+      var corps = elFiche.querySelectorAll("span, h2, p, .c3-act");
+      if (avait) Array.prototype.forEach.call(corps, function(n, i){ n.animate([{transform: "translateY(10px)", opacity: 0}, {transform: "none", opacity: 1}], {duration: 380, delay: i * 35, easing: "cubic-bezier(.22,.8,.2,1)", fill: "backwards"}); });
+      else elFiche.animate([{transform: "translateY(24px)", opacity: 0}, {transform: "none", opacity: 1}], {duration: 460, easing: "cubic-bezier(.22,.8,.2,1)"});
+    }
   }
-  function fermerFiche(){ st.sel = null; if (st.iso){ st.iso = false; if (eng) eng.filtre(filtre()); } if (eng) eng.selection(null); elFiche.hidden = true; }
+  function fermerFiche(){
+    if (st.sel == null && elFiche.hidden) return;
+    st.sel = null; if (st.iso){ st.iso = false; if (eng) eng.filtre(filtre()); } if (eng) eng.selection(null);
+    if (!env.reduit && elFiche.animate && !elFiche.hidden){ var an = elFiche.animate([{transform: "none", opacity: 1}, {transform: "translateY(18px)", opacity: 0}], {duration: 220, easing: "ease-in"}); an.onfinish = function(){ if (st.sel == null) elFiche.hidden = true; }; }
+    else elFiche.hidden = true;
+  }
   function isoler(){
     if (st.sel == null || !eng) return; st.iso = !st.iso; var e = eng.els[st.sel], base = filtre();
     eng.filtre(st.iso ? function(x, i){ return (e.a ? x.a === e.a : x === e) || (x.c === 4 && (!base || base(x))); } : base);
@@ -10324,7 +10314,7 @@ function monter(host, env){
   syncUI(); demarrer();
   return api;
 }
-A.Vue3D = {monter: monter, COUCHES: COUCHES, REG: REG, RENDUS: RENDUS, charger: charger};
+A.Vue3D = {monter: monter, COUCHES: COUCHES, REG: REG, RENDUS: RENDUS, POSES: POSES, charger: charger};
 })();
 
 var RT = window.ATLAS.RT;
@@ -11085,7 +11075,7 @@ function renderSheet(html, id){
   if (!wasOpen){ sheet.classList.remove("full"); sheet.style.removeProperty("--sy"); }
   document.body.classList.add("sheet-open");
   podSide(id === "podcast");
-  scrim.hidden = !(MQ_SHEET.matches && curView !== "carte");
+  scrim.hidden = !(MQ_SHEET.matches && curView !== "carte" && curView !== "corps");
   mountFigs(sheet);
   var b = $(".sheet-body", sheet); if (b) b.scrollTop = 0;
   var h = $("#sheet-title", sheet); if (h && !window.matchMedia("(pointer:coarse)").matches) h.focus({preventScroll: true});
@@ -11182,7 +11172,7 @@ function setPref(name, val){
   if (name === "resume"){ if (val) P.last = lastSnap(); else delete P.last; }
   save();
   $$('[data-set="' + name + '"]').forEach(function(b){ b.setAttribute("aria-pressed", b.getAttribute("data-val") === String(name === "theme" ? (P.prefs.theme || "auto") : P.prefs[name]) ? "true" : "false"); });
-  if (name === "rendu3d"){ if (C3.v) C3.v.rendu(val); if (C3.story) C3.story.rendu(val === "epure" ? "planche" : val); }
+  if (name === "rendu3d"){ if (C3.v) C3.v.rendu(val); }
   if (name === "theme"){ if (C3.v) C3.v.theme(); }
   if (name === "lecture"){ if (rendered.apprendre && AP.sub === "parcours") pcRender(); if (SH.cur && S[SH.cur.id]) refreshSheet(); }
   if (name === "anim"){ if (rendered.exercices) renderExGrid(); if (rendered.carte) updMapFig(); }
@@ -11613,8 +11603,8 @@ RENDER.accueil = function(){
   storyInit(); homeStudy(); homeLab();
   homeLoop();
 };
-REFRESH.accueil = function(){ if (C3.story && !$("#story.plan2d")){ C3.story.suspendre(false); C3.story.reprise(); } if (HOME.study && !HOME.study.playing() && !(REDUCED || P.prefs.anim === false)) HOME.study.play(); if (HOME.lab) HOME.lab.play(); if (HOME.loop) HOME.loop.play(); storyFrame(false); };
-LEAVE.accueil = function(){ if (C3.story) C3.story.suspendre(true); if (HOME.study) HOME.study.pause(); if (HOME.lab) HOME.lab.stop(); if (HOME.loop) HOME.loop.stop(); };
+REFRESH.accueil = function(){ if (HOME.study && !HOME.study.playing() && !(REDUCED || P.prefs.anim === false)) HOME.study.play(); if (HOME.lab) HOME.lab.play(); if (HOME.loop) HOME.loop.play(); storyFrame(false); };
+LEAVE.accueil = function(){ if (HOME.study) HOME.study.pause(); if (HOME.lab) HOME.lab.stop(); if (HOME.loop) HOME.loop.stop(); };
 
 function homeLearn(){
   var done = lessonsDone(), last = P.cours.last && LES[P.cours.last] ? LES[P.cours.last] : null;
@@ -11670,31 +11660,24 @@ function storyArea(){
     top = Math.max(h * 0.42, Math.min(h * 0.66, top));
     return {w: w, h: h, phone: true, box: [0, 10, w, top], lbl: [0, 0, w, top + 6]};
   }
-  var mid = w < 1000, cap3 = $("#story.en3d") ? $('.story-txt > div[data-s="' + Math.max(0, HOME.step) + '"]') : null;
-  if (cap3 && HOME.step % 2 === 1){
-    var tl = cap3.getBoundingClientRect().left - host.getBoundingClientRect().left, x1 = Math.max(w * 0.5, tl - (mid ? 24 : 40));
-    return {w: w, h: h, phone: false, mid: mid, box: [mid ? 28 : 70, 26, x1, h - 30], lbl: [mid ? 22 : 64, 0, x1 + 10, h]};
-  }
-  var txt = cap3 || $(".story-txt"), tr = txt ? txt.getBoundingClientRect().right - host.getBoundingClientRect().left : w * 0.4;
-  var x0 = Math.min(w * 0.5, tr + (mid ? 24 : 40));
+  var txt = $(".story-txt"), tr = txt ? txt.getBoundingClientRect().right - host.getBoundingClientRect().left : w * 0.4;
+  var mid = w < 1000, x0 = Math.min(w * 0.5, tr + (mid ? 24 : 40));
   return {w: w, h: h, phone: false, mid: mid, box: [x0, 26, w - (mid ? 28 : 70), h - 30], lbl: [x0 - 10, 0, w - (mid ? 22 : 64), h]};
 }
-function storySil(s, A2){ return s.frame !== "sil" && !!$("#story.en3d") && !A2.phone && !A2.land; }
 function storyVB(s, A2){
-  var sil = storySil(s, A2), reg = storyRegion(sil ? Object.assign({}, s, {frame: "sil"}) : s), bx = A2.box.slice();
+  var reg = storyRegion(s), bx = A2.box.slice();
   /* Légendes d'un seul côté (vue rapprochée) : la région se cale à droite, les noms occupent la gauche. */
-  if (s.lblSide === "l" && !sil){ bx[0] += A2.phone ? 136 : A2.land ? 168 : A2.mid ? 190 : 250; bx[2] -= A2.phone ? 4 : 20; }
+  if (s.lblSide === "l"){ bx[0] += A2.phone ? 136 : A2.land ? 168 : A2.mid ? 190 : 250; bx[2] -= A2.phone ? 4 : 20; }
   else { var lr = A2.phone ? 88 : A2.land ? 112 : A2.mid ? 112 : 170; bx[0] += lr; bx[2] -= lr; }
   var aw = Math.max(80, bx[2] - bx[0]), ah = bx[3] - bx[1];
   var sc = Math.min(aw / (reg[2] - reg[0]), ah / (reg[3] - reg[1]));
-  if (s.frame !== "sil" && !sil) sc = Math.min(sc, (A2.phone ? 2.2 : 2.6) * ah / 900);
+  if (s.frame !== "sil") sc = Math.min(sc, (A2.phone ? 2.2 : 2.6) * ah / 900);
   var acx = (bx[0] + bx[2]) / 2, acy = (bx[1] + bx[3]) / 2, cx = (reg[0] + reg[2]) / 2, cy = (reg[1] + reg[3]) / 2;
   return {vb: [cx - acx / sc, cy - acy / sc, A2.w / sc, A2.h / sc], reg: reg};
 }
 function storyLabels(s, A2, reg){
   if (!HOME.lbl) return;
-  var sil = storySil(s, A2);
-  HOME.lbl.set({items: storyItems(s), box: A2.lbl, ref: s.frame === "sil" || sil ? null : reg, halo: s.lblSide && !sil ? false : null, font: A2.phone ? 11.5 : A2.land || A2.mid ? 12.5 : 13.5});
+  HOME.lbl.set({items: storyItems(s), box: A2.lbl, ref: s.frame === "sil" ? null : reg, halo: s.lblSide ? false : null, font: A2.phone ? 11.5 : A2.land || A2.mid ? 12.5 : 13.5});
 }
 function storyFrame(animate){
   if (!HOME.map || HOME.step < 0) return;
@@ -11715,7 +11698,6 @@ function storyGo(i, first){
   $$(".story-dots button").forEach(function(b){ b.classList.toggle("on", +b.dataset.sd === i); });
   $("#story").classList.toggle("past", i > 0);
   storyFrame(!first && prev >= 0);
-  c3StoryGo(i);
 }
 function storyInit(){
   var host = $("#story-map"); if (!host) return;
@@ -11730,7 +11712,6 @@ function storyInit(){
   HOME.lbl.hide(true);
   storyGo(0, true);
   setTimeout(function(){ if (HOME.step === 0){ HOME.lbl.hide(false); } }, REDUCED ? 0 : 1100);
-  c3Story();
   /* Planche active : celle qui occupe le milieu de l'écran. Calculée d'après le défilement (et non par un observateur
      d'intersection, dont les marges sont ignorées quand la page est affichée dans un cadre d'une autre origine). */
   HOME.sync = function(){
@@ -14420,81 +14401,6 @@ __rt.on(document, "click", function(e){
   if (b.hasAttribute("data-c3r")) c3Ouvrir({r: b.getAttribute("data-c3r")}); else { var id = b.getAttribute("data-c3"); closeSheet(); c3Ouvrir({id: id}); }
 });
 
-/* ---------- Accueil : six chapitres, 3D et planches 2D en alternance ----------
-   Chapitres I, III, V : le corps en 3D, à droite du texte. Chapitres II, IV, VI : la planche 2D de la carte, à gauche
-   du texte. On passe de l'un à l'autre par un volet qui balaie l'écran dans le sens de la lecture (pas de fondu).
-   Sans WebGL 2, tous les chapitres restent en 2D, comme avant. */
-var C3_CORPS = [[-.36, 0, -.16], [.36, 1.74, .16]];
-function c3Plans(){
-  return [
-    {c: 1, bb: C3_CORPS, yaw: -12, pitch: -2, k: 1.02, pose: "planche"},
-    {d2: true},
-    {c: 1, bb: C3_CORPS, yaw: 166, pitch: 0, k: 1.02, pose: "dos", etiq: STORY[2].items},
-    {d2: true},
-    {c: 6, bb: C3_CORPS, yaw: 16, pitch: -2, k: 1.03, pose: "planche", etiq: STORY[4].items},
-    {d2: true}
-  ];
-}
-function c3StoryLbl(){ return window.innerWidth >= 1000 && window.innerHeight >= 600; }
-/* Volet : le calque qui arrive se découvre depuis le bord, au-dessus de celui qui part. */
-function c3Lay(st, m, retour){
-  var a = $(".story-3d", st), b = $("#story-map"), inc = m === "3d" ? a : b, out = m === "3d" ? b : a;
-  st.setAttribute("data-m", m);
-  if (!inc || inc.classList.contains("on")) return;
-  st.classList.toggle("retour", !!retour);
-  inc.style.transition = "none"; inc.style.clipPath = retour ? "inset(0 100% 0 0)" : "inset(0 0 0 100%)"; void inc.offsetWidth;
-  inc.style.transition = ""; inc.style.clipPath = "";
-  inc.classList.add("on"); if (out) out.classList.remove("on");
-}
-function c3Story(){
-  var host = $("#story-map"), st = $("#story"); if (!host || !st || !A.Vue3D) return;
-  if (C3.story){ try { C3.story.detruire(); } catch (e){} C3.story = null; }
-  $$(".story-3d", st).forEach(function(x){ x.parentNode.removeChild(x); });
-  host.classList.add("lay", "on");
-  var box = document.createElement("div"); box.className = "story-3d lay"; box.setAttribute("aria-hidden", "true"); host.parentNode.appendChild(box);
-  var plans = c3Plans(), i0 = HOME.step < 0 ? 0 : HOME.step, k3 = plans[i0].d2 ? 0 : i0, p0 = plans[k3];
-  var env = c3Env();
-  env.nu = true; env.sansIntro = !!C3.recitVu || i0 > 0; env.surEtat = null; env.imprimer = null; env.legDroite = true;
-  env.etat = {c: p0.c || 1, r: "", rendu: c3Rendu() === "epure" ? "planche" : c3Rendu(), lbl: !!p0.etiq && c3StoryLbl(), pose: true,
-    libre: {bb: p0.bb, yaw: p0.yaw, pitch: p0.pitch, k: p0.k, pose: p0.pose}, etiq: p0.etiq || null};
-  /* Le corps se place dans la partie libre de la scène : du côté opposé au texte (avec la colonne de légendes au
-     bord), ou au-dessus du texte sur téléphone. */
-  env.marges = function(w, h){
-    var t = $('.story-txt > div[data-s="' + Math.max(0, HOME.step) + '"]') || $(".story-txt > div"), sr = host.getBoundingClientRect(), tr = t ? t.getBoundingClientRect() : null;
-    if (!tr || !tr.width) return {l: 20, r: 20, t: 30, b: 30};
-    var lbl = C3.story && C3.story.etat.lbl, lw = lbl ? Math.min(310, w * .24) : Math.max(24, w * .05);
-    if (tr.width < w * .62){
-      if (tr.left - sr.left > w * .4) return {l: lw, r: Math.min(w * .5, sr.right - tr.left + 24), t: 20, b: 26};
-      return {l: Math.min(w * .5, tr.right - sr.left + 24), r: lw, t: 20, b: 26};
-    }
-    return {l: 10, r: 10, t: 16, b: Math.min(h * .55, Math.max(60, sr.bottom - tr.top + 10))};
-  };
-  env.pret = function(v){
-    C3.recitVu = true; C3.recitI = i0;
-    st.classList.add("en3d");
-    storyFrame(false);
-    c3Lay(st, plans[i0].d2 ? "2d" : "3d", false);
-    if (plans[i0].d2) v.suspendre(true);
-  };
-  C3.story = A.Vue3D.monter(box, env);
-  /* Hors de l'écran, ou pendant une planche 2D, la 3D s'arrête. */
-  var io = new IntersectionObserver(function(en){ var vu = en[0].isIntersecting && curView === "accueil"; if (C3.story) C3.story.suspendre(!vu || st.getAttribute("data-m") === "2d"); }, {threshold: 0});
-  io.observe(st);
-}
-function c3StoryGo(i, net){
-  var v = C3.story, st = $("#story"), p = c3Plans()[i]; if (!v || !v.eng || !p || !st) return;
-  var prev = C3.recitI == null ? -1 : C3.recitI, retour = prev > i; C3.recitI = i;
-  clearTimeout(C3.tSus);
-  if (p.d2){
-    c3Lay(st, "2d", retour);
-    C3.tSus = setTimeout(function(){ if (C3.story && st.getAttribute("data-m") === "2d") C3.story.suspendre(true); }, 1000);
-    return;
-  }
-  v.suspendre(false);
-  var deja = st.getAttribute("data-m") === "3d";
-  v.plan({c: p.c, bb: p.bb, yaw: p.yaw, pitch: p.pitch, k: p.k, pose: p.pose, etiq: p.etiq, lbl: !!p.etiq && c3StoryLbl()}, net || !deja);
-  c3Lay(st, "3d", retour);
-}
 /* ---------- Cartes à imprimer : complète (légendée) ou muette (à remplir) ---------- */
 var C3P = {type: "complete", url: null};
 function c3Imprimer(){
@@ -14516,11 +14422,13 @@ function c3Carte(){
   var V = C3.v, eng = V && V.eng, box = $("#c3p-prev"); if (!eng || !box) return;
   var mobile = window.matchMedia("(pointer:coarse)").matches, PW = mobile ? 1654 : 2480, PH = Math.round(PW * 1.4142), k = PW / 2480;
   var M = Math.round(120 * k), top = Math.round(360 * k), col = Math.round(420 * k), fw = PW - 2 * M, fh = PH - top - Math.round(230 * k);
-  var r = V.reg(), st = V.etat, cad = V.cadre(), muette = C3P.type === "muette";
+  var r = V.reg(), st = V.etat, cad = V.cadre(true), muette = C3P.type === "muette";
   var o;
   try { o = eng.planche({w: fw, h: fh, bb: cad.bb, yaw: cad.yaw, pitch: cad.pitch, serre: 1.06, marge: {l: col, r: col, t: Math.round(30 * k), b: Math.round(30 * k)}}); }
   catch (e){ box.innerHTML = '<p class="faint">' + esc(T("La carte n'a pas pu être préparée sur cet appareil.")) + "</p>"; return; }
-  var L = V.disposer(V.listeDe(o.ancres, fw, fh, 24, fw / 2), fw, fh, {cx: fw / 2, pas: 78 * k, haut: 50 * k, bas: fh - 50 * k, xg: col - 30 * k, xd: fw - col + 30 * k});
+  /* Seules les structures du cadre central sont légendées : les colonnes de noms restent libres. */
+  var an = o.ancres.filter(function(a){ var px = a.x * fw; return px > col + 30 * k && px < fw - col - 30 * k; });
+  var L = V.disposer(V.listeDe(an, fw, fh, 24, fw / 2), fw, fh, {cx: fw / 2, pas: 78 * k, haut: 50 * k, bas: fh - 50 * k, xg: col - 30 * k, xd: fw - col + 30 * k});
   var G = L.filter(function(l){ return l.g; }).sort(function(a, b){ return a.ly - b.ly; }), D = L.filter(function(l){ return !l.g; }).sort(function(a, b){ return a.ly - b.ly; });
   G.concat(D).forEach(function(l, i){ l.no = i + 1; });
   var img = new Image();
@@ -14528,20 +14436,36 @@ function c3Carte(){
     var c = document.createElement("canvas"); c.width = PW; c.height = PH; var x = c.getContext("2d"), F = '-apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif';
     x.fillStyle = "#fff"; x.fillRect(0, 0, PW, PH);
     x.drawImage(img, M, top, fw, fh);
+    /* Ce qui dépasse du cadre central (le reste du corps) se fond dans le papier, sous les colonnes de noms. */
+    [[M + col - 70 * k, M + col + 10 * k, M, M + col - 70 * k], [M + fw - col + 70 * k, M + fw - col - 10 * k, M + fw - col + 70 * k, PW - M]].forEach(function(z){
+      var g = x.createLinearGradient(z[0], 0, z[1], 0); g.addColorStop(0, "rgba(255,255,255,1)"); g.addColorStop(1, "rgba(255,255,255,0)");
+      x.fillStyle = g; x.fillRect(Math.min(z[0], z[1]), top, Math.abs(z[1] - z[0]), fh);
+      x.fillStyle = "#fff"; x.fillRect(z[2], top, z[3] - z[2], fh);
+    });
     /* En-tête */
     x.fillStyle = "#1d1d1f"; x.font = "600 " + 30 * k + "px " + F; x.textBaseline = "alphabetic"; x.fillText("ATLAS · " + T("Corps en 3D").toUpperCase(), M, 118 * k);
     x.fillStyle = "#1d1d1f"; x.font = "600 " + 92 * k + "px " + F; x.fillText(T(r.n), M, 222 * k);
     x.fillStyle = "#6e6e73"; x.font = "400 " + 36 * k + "px " + F; x.fillText("0" + st.c + " · " + T(V.COUCHES[st.c - 1][0]) + " · " + T(muette ? "Carte muette" : "Carte complète"), M, 284 * k);
     if (muette){ x.textAlign = "right"; x.fillText(T("Nom") + " : ____________________   " + T("Date") + " : __________", PW - M, 284 * k); x.textAlign = "left"; }
     x.strokeStyle = "#1d1d1f"; x.lineWidth = 2 * k; x.beginPath(); x.moveTo(M, 318 * k); x.lineTo(PW - M, 318 * k); x.stroke();
-    /* Légendes */
+    /* Légendes : une seule taille de texte pour toute la carte ; un nom trop long passe sur deux lignes. */
     x.lineWidth = 2.2 * k; x.lineJoin = "round";
+    var tw = col - 60 * k, fs = 32 * k;
+    x.font = "600 " + 26 * k + "px " + F; var nwMax = x.measureText(String(L.length)).width + 14 * k;
+    function lignes(nom, taille){
+      x.font = "500 " + taille + "px " + F; var dispo = tw - nwMax;
+      if (x.measureText(nom).width <= dispo) return [nom];
+      var mots = nom.split(" "), best = null;
+      for (var i = 1; i < mots.length; i++){ var a1 = mots.slice(0, i).join(" "), a2 = mots.slice(i).join(" "), m = Math.max(x.measureText(a1).width, x.measureText(a2).width); if (!best || m < best.m) best = {l: [a1, a2], m: m}; }
+      return best && best.m <= dispo ? best.l : null;
+    }
+    if (!muette) for (var it = 0; it < 30 && L.some(function(l){ return !lignes(l.nom, fs); }); it++) fs -= 1 * k;
     L.forEach(function(l){
       var ax = M + l.x, ay = top + l.y, ly = top + l.ly, lx = M + l.lx, dy = Math.abs(ly - ay), xe = l.g ? Math.max(lx + 10 * k, ax - dy) : Math.min(lx - 10 * k, ax + dy);
       x.strokeStyle = "rgba(29,29,31,.72)"; x.beginPath(); x.moveTo(lx, ly); x.lineTo(xe, ly); x.lineTo(ax, ay); x.stroke();
       x.fillStyle = "#1d1d1f"; x.beginPath(); x.arc(ax, ay, 6 * k, 0, 6.3); x.fill();
       /* Numéro contre le trait, puis le nom ou la ligne à remplir */
-      var tw = col - 60 * k, nx = l.g ? lx - 12 * k : lx + 12 * k, no = String(l.no);
+      var nx = l.g ? lx - 12 * k : lx + 12 * k, no = String(l.no);
       x.textBaseline = "middle"; x.font = "600 " + 26 * k + "px " + F; var nw = x.measureText(no).width + 14 * k;
       x.textAlign = l.g ? "right" : "left"; x.fillStyle = "#1d1d1f"; x.fillText(no, nx, ly);
       if (muette){
@@ -14549,8 +14473,9 @@ function c3Carte(){
         if (l.g){ x.moveTo(M + 10 * k, ly + 15 * k); x.lineTo(nx - nw, ly + 15 * k); } else { x.moveTo(nx + nw, ly + 15 * k); x.lineTo(PW - M - 10 * k, ly + 15 * k); }
         x.stroke(); x.lineWidth = 2.2 * k;
       } else {
-        var fs = 34 * k; x.font = "500 " + fs + "px " + F; while (x.measureText(l.nom).width > tw - nw && fs > 20 * k){ fs -= 1.5 * k; x.font = "500 " + fs + "px " + F; }
-        x.fillStyle = "#1d1d1f"; x.fillText(l.nom, l.g ? nx - nw : nx + nw, ly);
+        var ls = lignes(l.nom, fs) || [l.nom], hl = fs * 1.12;
+        x.font = "500 " + fs + "px " + F; x.fillStyle = "#1d1d1f";
+        ls.forEach(function(t, j){ x.fillText(t, l.g ? nx - nw : nx + nw, ly + (j - (ls.length - 1) / 2) * hl); });
       }
       x.textAlign = "left";
     });
