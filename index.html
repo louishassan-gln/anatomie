@@ -1886,7 +1886,7 @@ input[type="search"],input[type="text"],input[type="number"],select,textarea{bor
 .story-ghost *{animation:none !important}
 .story-voile{position:absolute; inset:0; z-index:9; background:#000; opacity:0; pointer-events:none}
 /* Corps 3D de l'ouverture, sous les planches. */
-.story-3d{position:absolute; inset:0; z-index:1; pointer-events:none; background:#000}
+.story-3d{position:absolute; inset:0; z-index:1; pointer-events:none; background:transparent; will-change:transform}
 .c3-nu .c3-tl,.c3-nu .c3-prof{display:none!important}
 @media (min-width: 761px){ .story-3d .c3-cv{-webkit-mask-image:linear-gradient(to bottom, #000 70%, transparent 99%); mask-image:linear-gradient(to bottom, #000 70%, transparent 99%)} }
 .story.dir:not(.a3d) .story-3d{display:none}
@@ -2090,6 +2090,32 @@ html[data-rendu="epure"] :is(#v-carte, .q-map, .sheet) .atlas-svg.pal-g .k-muscl
 .story-vig{position:absolute; inset:0; z-index:4; pointer-events:none; opacity:0; background:radial-gradient(ellipse 75% 70% at 60% 45%, rgba(0,0,0,0) 40%, rgba(0,0,0,.85) 100%)}
 .story-fond .f-pap,.story-lum,.story-fade2,.story-haut{will-change:transform}
 .story-ghost.papier-g{background:transparent; z-index:2}
+
+/* ---------- Version 13 : plan séquence 3D ---------- */
+/* Légendes du corps 3D de l'accueil : sombres sur le papier, claires sur le noir et le rouge. */
+.story-3d .c3-noms button{font-size:12.5px}
+.story.dir.clair .story-3d .c3{--fg:#111113; --fg-2:#3a3a3c}
+.story.dir.clair .story-3d .c3-noms button{color:#111113; text-shadow:0 0 6px #ebe8e1, 0 0 2px #ebe8e1}
+.story.dir.clair .story-3d .c3-fil path{stroke:#111113}
+.story.dir.clair .story-3d .c3-fil circle{fill:#111113}
+.story-3d .c3.c3-nu{background:transparent}
+.story-faisceau{display:none}
+.c3-nu .c3-zoom,.c3-nu .c3-msg{display:none!important}
+.story-fond .f-pap.page{box-shadow:0 40px 80px rgba(0,0,0,.55)}
+.story.dir.clair .story-3d .c3-noms button{text-shadow:0 0 3px #ebe8e1, 0 0 6px #ebe8e1, 0 0 10px #ebe8e1, 0 0 2px #fff}
+.story.dir:not(.clair) .story-3d .c3-noms button{text-shadow:0 0 3px #000, 0 0 7px rgba(0,0,0,.9), 0 0 12px rgba(0,0,0,.7)}
+
+/* ---------- Version 13 : Se tester, boutons sur iPhone ---------- */
+.c3-test{max-width:560px}
+.c3-q{font-family:var(--f-display); font-weight:800; font-size:clamp(26px, 4vw, 36px); letter-spacing:-.03em; line-height:1.05; margin:8px 0 6px; color:var(--fg)}
+.c3-q-msg{min-height:22px; margin:6px 0 14px; color:var(--fg-2); font-size:15px}
+.c3-q-msg .ok{color:#30d158} .c3-q-msg .ko{color:var(--red-text)}
+.c3-q-bas{display:flex; align-items:center; gap:16px}
+.c3-q-score{font-weight:700; color:var(--fg-2); font-variant-numeric:tabular-nums}
+@media (max-width: 759px){
+  .c3-msg{right:62px}
+  #map-stage .ov-br{top:216px}
+}
 </style>
 <svg class="defs" aria-hidden="true" focusable="false">
   <defs>
@@ -7840,6 +7866,12 @@ window.ATLAS.UI_EN = {
 "Voix enregistrée, lue en ligne depuis GitHub : une connexion est nécessaire. L'écoute continue écran verrouillé. Si tu n'entends rien, vérifie le volume.": "Recorded voice, streamed from GitHub: a connection is needed. Listening continues with the screen locked. If you hear nothing, check the volume.",
 "Voix introuvables à côté de la page et en ligne (pas de connexion ?). Une fois connecté, touche lecture.": "Voices not found next to the page or online (no connection?). Once connected, tap play.",
 "Voix lues en ligne depuis GitHub : une connexion est nécessaire.": "Voices streamed from GitHub: a connection is needed.",
+"Se tester": "Test yourself",
+"Touche sur le corps": "Tap on the body",
+"Autre muscle": "Another muscle",
+"c'était": "that was",
+"série": "streak",
+"Aucun muscle dans cette vue : change de région ou de couche.": "No muscle in this view: change region or layer.",
 "Rendu": "Rendering",
 "Rendu des planches et du corps en 3D": "Plates and 3D body rendering",
 "Planche : les couleurs de la carte. Épuré : traits seuls, pour étudier la structure et se tester. S'applique à la carte et au corps en 3D.": "Plate: the map's colours. Outline: lines only, to study structure and test yourself. Applies to the map and the 3D body.",
@@ -9714,7 +9746,7 @@ var FS = [
 "  /* Modelé très léger à l'intérieur de chaque aplat, pour la lumière de studio. */",
 "  col *= .82 + .22 * clamp(ndl * .5 + .5, 0., 1.);",
 "  vec3 H = normalize(Lk + vec3(0., 0., 1.)); float sp = bande(dot(N, H), .972) * uFx.w;",
-"  col = mix(col, uSpecC, sp * (.07 + .05 * mus));",
+"  col = mix(col, uSpecC, sp * (.05 + .035 * mus));",
 "  float fr = 1. - clamp(N.z, 0., 1.), rim = bande(fr, .7) * bande(dot(N, Lr), .02);",
 "  col = mix(col, uRimC, rim * uKey.w);",
 "  /* Lumière de studio poussée : débouchage froid, translucidité, contre-jours, reflet satiné des fibres. */",
@@ -9723,7 +9755,7 @@ var FS = [
 "    float nk = clamp(ndl, 0., 1.), nf = clamp(dot(N, Lf), 0., 1.);",
 "    col *= mix(vec3(1.), vec3(.84, .89, 1.05), (1. - nk) * .55 * uLux.x);",
 "    col += base * vec3(.09, .12, .19) * nf * uLux.x;",
-"    col *= 1. + .16 * pow(nk, 3.) * uLux.x;",
+"    col *= 1. + .1 * pow(nk, 3.) * uLux.x;",
 "    float ter = exp(-pow((ndl - .03) / .2, 2.));",
 "    col += vec3(.62, .07, .03) * ter * mus * (1. - td) * .2 * uLux.y;",
 "    float fr2 = pow(1. - clamp(N.z, 0., 1.), 2.4);",
@@ -9731,7 +9763,7 @@ var FS = [
 "    col += (vec3(.72, .84, 1.) * r1 * .5 + vec3(1., .8, .66) * r2 * .3) * uLux.z;",
 "    if (mus > .5 && dot(vT, vT) > 1e-6){",
 "      vec3 Tf = normalize(vT), Hh = normalize(Lk + vec3(0., 0., 1.)); float th = dot(Tf, Hh);",
-"      col += vec3(1., .86, .8) * pow(sqrt(max(0., 1. - th * th)), 70.) * nk * .14 * uLux.w * (1. - td);",
+"      col += vec3(1., .86, .8) * pow(sqrt(max(0., 1. - th * th)), 70.) * nk * .09 * uLux.w * (1. - td);",
 "    }",
 "  }",
 "  /* Teinte de la lumière (rouge progressif de l'accueil) : la clé et les contre-jours prennent la couleur. */",
@@ -9790,12 +9822,16 @@ var FQ = [
 "    c *= 1. - occ / 12. * uP.w;",
 "    vec2 qk = (vU - uSpot.xy - vec2(-.09, .17)) * vec2(uRes.x / uRes.y, 1.);",
 "    c *= mix(uSpot.w, 1.07, smoothstep(1.05, .04, length(qk)));",
+"    float fi = m > .5 ? fade : texture(uC, vU + vec2(uPx.x, 0.) * uLw).a, ia = ink * .92 * max(fi, fade);",
+"    if (uP.z > .5){",
+"      /* Fond transparent : le corps (prémultiplié) et ses contours, rien d'autre. */",
+"      vec3 pm = c * cover * (1. - ia) + uInk * ia; float al = cover * (1. - ia) + ia;",
+"      if (uGr.x > 0. && al > .001){ vec3 cc = pm / al; float lu = dot(cc, vec3(.3, .59, .11)); vec3 g = mix(cc * vec3(.9, .97, 1.08), cc * vec3(1.05, 1., .94), smoothstep(.08, .62, lu)); g = g * g * (3. - 2. * g) * .35 + g * .65; pm = mix(cc, g, uGr.x) * al; }",
+"      o = vec4(pm, al); return;",
+"    }",
 "    col = mix(bg, c, cover);",
-"    float fi = m > .5 ? fade : texture(uC, vU + vec2(uPx.x, 0.) * uLw).a;",
-"    col = mix(col, uInk, ink * .92 * max(fi, fade));",
+"    col = mix(col, uInk, ia);",
 "  }",
-"  /* Halo : un souffle de lumière froide autour du corps, sur le fond. */",
-"  col += vec3(.55, .65, .85) * near * (1. - m) * uGr.y * .09;",
 "  /* Étalonnage cinéma : ombres légèrement froides, lumières chaudes, contraste en S doux. */",
 "  if (uGr.x > 0.){",
 "    float lu = dot(col, vec3(.3, .59, .11));",
@@ -9818,11 +9854,11 @@ var FX = [
 "  vec2 dir = vec2(-((lNW + lNE) - (lSW + lSE)), (lNW + lSW) - (lNE + lSE));",
 "  float red = max((lNW + lNE + lSW + lSE) * .03125, .0078125), rcp = 1. / (min(abs(dir.x), abs(dir.y)) + red);",
 "  dir = clamp(dir * rcp, -8., 8.) * uPx;",
-"  vec3 A = .5 * (texture(uC, vU + dir * (1. / 3. - .5)).rgb + texture(uC, vU + dir * (2. / 3. - .5)).rgb);",
-"  vec3 B = A * .5 + .25 * (texture(uC, vU - dir * .5).rgb + texture(uC, vU + dir * .5).rgb);",
-"  float lB = dot(B, lw); vec3 col = (lB < lMin || lB > lMax) ? A : B;",
-"  vec2 vg = vU - .5; col *= 1. - dot(vg, vg) * uF.x;",
-"  o = vec4(col, 1.);",
+"  vec4 A = .5 * (texture(uC, vU + dir * (1. / 3. - .5)) + texture(uC, vU + dir * (2. / 3. - .5)));",
+"  vec4 B = A * .5 + .25 * (texture(uC, vU - dir * .5) + texture(uC, vU + dir * .5));",
+"  float lB = dot(B.rgb, lw); vec4 col = (lB < lMin || lB > lMax) ? A : B;",
+"  vec2 vg = vU - .5; col.rgb *= 1. - dot(vg, vg) * uF.x;",
+"  o = col;",
 "}"].join("\n");
 
 function prog(gl, vs, fs){
@@ -9848,6 +9884,9 @@ var STYLES = {
   nuit: {muscle: "#55524e", tendon: "#a39e96", os: "#aaa59c", cart: "#636668", conj: "#918c85", peau: "#555555",
     shade: [.13, .13, .14], core: "#d2cdc4", rim: "#f7f4ee", spec: "#ffffff", sel: "#ff453a", ink: "#000000", fx: 1,
     bg0: "#000000", bg1: "#000000", ao: .9, key: [-.6, .82, .3], rimK: .92, coreK: .42, pool: .14, fib: .9, lux: [.7, 0, 1.25, .8], grade: [.6, .6]},
+  abysse: {muscle: "#383533", tendon: "#706b64", os: "#77726a", cart: "#4b4e50", conj: "#66615b", peau: "#444444",
+    shade: [.09, .09, .1], core: "#b3ada3", rim: "#f6f2ea", spec: "#ffffff", sel: "#ff453a", ink: "#000000", fx: 1,
+    bg0: "#000000", bg1: "#000000", ao: .95, key: [-.55, .85, .25], rimK: 1, coreK: .34, pool: .1, fib: .95, lux: [.6, 0, 1.45, .5], grade: [.6, 0]},
   papier: {muscle: "#c8463a", tendon: "#f3ecdc", os: "#ece3cf", cart: "#c6cfd1", conj: "#f0e8d6", peau: "#d9c9b8",
     shade: [.64, .52, .55], core: "#f07a68", rim: "#ffffff", spec: "#ffffff", sel: "#1d1d1f", ink: "#1d1514", fx: 1,
     bg0: "#ffffff", bg1: "#ffffff", ao: .35, clair: 1, fib: .8},
@@ -9858,7 +9897,7 @@ var STYLES = {
 
 function creer(canvas, data, opt){
   opt = opt || {};
-  var gl = canvas.getContext("webgl2", {antialias: false, alpha: false, powerPreference: "high-performance", preserveDrawingBuffer: !!opt.capture});
+  var gl = canvas.getContext("webgl2", {antialias: false, alpha: !!opt.transparent, premultipliedAlpha: true, powerPreference: "high-performance", preserveDrawingBuffer: !!opt.capture});
   if (!gl) throw new Error("webgl2");
   var M = data.meta, ELS = M.els, NE = ELS.length, NS = M.seg.length;
   /* Pièces écartées pour de bon (les cartilages du nez) : jamais affichées, jamais cadrées. */
@@ -10135,7 +10174,7 @@ function creer(canvas, data, opt){
     gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, tD); gl.uniform1i(u.uD, 2);
     gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, tP); gl.uniform1i(u.uPrev, 3);
     gl.uniform2f(u.uPx, 1 / pw, 1 / ph); gl.uniform2f(u.uRes, pw, ph);
-    gl.uniform4f(u.uCam, S.near, S.far, 0, 0); gl.uniform4f(u.uP, sc, st.clean ? 1 : 0, 0, st.ao);
+    gl.uniform4f(u.uCam, S.near, S.far, 0, 0); gl.uniform4f(u.uP, sc, st.clean ? 1 : 0, opt.transparent && !S.capW ? 1 : 0, st.ao);
     gl.uniform3fv(u.uBg0, hex(S.capW && st.clair ? "#ffffff" : st.bg0)); gl.uniform3fv(u.uBg1, hex(S.capW && st.clair ? "#ffffff" : st.bg1)); gl.uniform3fv(u.uInk, hex(st.ink));
     var w = dimW(), h = dimH(), mg = S.marge, sp = S.spot || {};
     gl.uniform4f(u.uSpot, sp.x != null ? sp.x : .5 + (mg.l - mg.r) / w / 2, sp.y != null ? sp.y : .52 + (mg.b - mg.t) / h / 2, sp.r || .42, st.pool != null ? st.pool : .6);
@@ -10166,7 +10205,7 @@ function creer(canvas, data, opt){
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tF); gl.uniform1i(u.uC, 0);
     gl.uniform2f(u.uPx, 1 / pw, 1 / ph);
     var st = STYLES[S.style] || STYLES.planche;
-    gl.uniform4f(u.uF, st.clean || S.capW ? 0 : .38, 0, 0, 0);
+    gl.uniform4f(u.uF, st.clean || S.capW || opt.transparent ? 0 : .38, 0, 0, 0);
     gl.drawArrays(gl.TRIANGLES, 0, 3); gl.bindVertexArray(null);
     if (opt.apresRendu) opt.apresRendu();
   }
@@ -10319,6 +10358,19 @@ function creer(canvas, data, opt){
       return px;
     },
     segMats: function(){ return bm.map(function(m){ return Array.prototype.slice.call(m); }); },
+    /* Mélange de deux rendus (accueil : de « nuit » à « abysse ») ; t de 0 à 1. */
+    melange: function(a, b, t){
+      var A0 = STYLES[a], B0 = STYLES[b]; if (!A0 || !B0) return;
+      var m = STYLES._mix || (STYLES._mix = {}), mh = function(x, y){ var p = hex(x), q = hex(y), c = function(i){ var v = Math.round((p[i] + (q[i] - p[i]) * t) * 255); return (v < 16 ? "0" : "") + v.toString(16); }; return "#" + c(0) + c(1) + c(2); };
+      Object.keys(A0).concat(Object.keys(B0)).forEach(function(k){
+        var x = k in A0 ? A0[k] : B0[k], y = k in B0 ? B0[k] : x;
+        if (typeof x === "number") m[k] = x + (y - x) * t;
+        else if (typeof x === "string" && x[0] === "#") m[k] = mh(x, y);
+        else if (Array.isArray(x)) m[k] = x.map(function(v, i){ var w = y[i] != null ? y[i] : v; return v + (w - v) * t; });
+        else m[k] = t < .5 ? x : y;
+      });
+      S.style = "_mix"; S.xf = 1; boucle();
+    },
     teinteLumiere: function(rgb, a){ S.tint = a > 0 ? [rgb[0], rgb[1], rgb[2], a] : null; boucle(); },
     flotter: function(amp){ S.flotte = amp || 0; if (amp) S.tFl = 0; boucle(); },
     pause: function(on){ S.pause = !!on; if (!on){ S.last = 0; boucle(); } else if (S.raf){ cancelAnimationFrame(S.raf); S.raf = 0; } },
@@ -10449,6 +10501,13 @@ var POSES = {
   statue: {bassin: [0, 2, 172], thorax: [-2, -2, -4], cou: [-2, 2, 16], tete: [-4, 4, 36], ceintureR: [0, 0, 8], ceintureL: [0, 0, 8],
     brasR: [-4, 9, -6], brasL: [-4, 9, -6], avantbrasR: [8, 0, 0], avantbrasL: [8, 0, 0], cuisseL: [2, 3, 4], jambeL: [4, 0, 0]},
   portrait: variante(ATHLETE, {tete: [6, 2, 14], cou: [3, 0, 6]}),
+  /* Accueil, planche II : trois quarts de profil (le côté droit vers nous), bras ballants, prise neutre. */
+  tourne34: {bassin: [0, 3, 54], lombaire: [0, -1, 3], thorax: [-2, -2, 6], cou: [-2, 0, 6], tete: [-4, 0, 12], ceintureR: [0, 0, 4], ceintureL: [0, 0, 4],
+    brasR: [-2, 7, -4], brasL: [-2, 7, -4], avantbrasR: [10, 0, 62], avantbrasL: [10, 0, 62], mainR: [6, 0, 0], mainL: [6, 0, 0], cuisseR: [-2, 2, 0], cuisseL: [5, 4, 8], jambeL: [10, 0, 0], piedL: [3, 0, 0]},
+  /* Accueil, planche III : trois quarts de dos, regard par-dessus l'épaule gauche, dos cambré, épaules larges, bras le long
+     du corps, poings serrés (le modèle n'a pas de doigts mobiles : le poignet se fléchit). */
+  dosArc: {bassin: [-2, 2, 214], lombaire: [-5, 0, -2], thorax: [-5, -1, -6], cou: [-5, 2, 30], tete: [-6, 6, 52], ceintureR: [0, 0, -6], ceintureL: [0, 0, -6],
+    brasR: [0, 2, 0], brasL: [0, 2, 0], avantbrasR: [6, 0, 0], avantbrasL: [6, 0, 0], mainR: [22, 0, 0], mainL: [22, 0, 0], cuisseR: [-3, 2, 0], cuisseL: [6, 5, 10], jambeL: [12, 0, 0], piedL: [4, 0, 0]},
   /* Tête et cou */
   cou_face: COU,
   /* Profil : menton levé, la tête tournée vers le côté opposé à la caméra (on voit tout le côté du cou). */
@@ -10468,9 +10527,9 @@ var POSES = {
   buste_face: variante(ATHLETE, {brasR: [-2, 9, -4], brasL: [-2, 9, -4], avantbrasR: [10, 0, 0], avantbrasL: [10, 0, 0]}),
   /* Profil : le bras du côté de la caméra en arrière et vers le bas, coude en arrière ; l'autre bras passe autour de
      la taille, l'avant-bras devant le ventre. */
-  buste_profil: variante(ATHLETE, {thorax: [-2, -2, -8], ceintureR: [0, 2, -4], brasR: [-26, 10, -4], avantbrasR: [22, 0, -10], mainR: [0, 0, 0], brasL: [4, 6, -86], avantbrasL: [80, 0, -30], mainL: [0, 0, 0], tete: [-3, 0, -14]}),
+  buste_profil: variante(ATHLETE, {thorax: [-2, -2, -8], ceintureR: [0, 2, -4], brasR: [-26, 10, -4], avantbrasR: [22, 0, -10], mainR: [0, 0, 0], brasL: [16, 8, -70], avantbrasL: [82, 0, -24], mainL: [-6, 0, 0], tete: [-3, 0, -14]}),
   /* Dos large : omoplates écartées, bras un peu décollés, coudes fléchis ; les dorsaux s'étalent. */
-  buste_dos: variante(ATHLETE, {thorax: [-2, -2, 4], ceintureR: [0, 2, -8], ceintureL: [0, 2, -8], brasR: [2, 14, -16], brasL: [2, 14, -16], avantbrasR: [30, 0, -22], avantbrasL: [30, 0, -22], tete: [-2, 0, 8]}),
+  buste_dos: variante(ATHLETE, {bassin: [0, 5, -6], lombaire: [-3, -2, 4], thorax: [-5, -3, 8], ceintureR: [0, 1, -6], ceintureL: [0, 1, -6], brasR: [-4, 12, -8], brasL: [4, 9, -4], avantbrasR: [16, 0, 8], avantbrasL: [26, 0, 4], tete: [-4, 2, 18]}),
   /* Hanches */
   hanche_face: {bassin: [0, 2, 4], thorax: [3, 0, 0], cuisseR: [14, 6, 16], jambeR: [0, 0, 0], piedR: [-8, 0, 0], cuisseL: [-2, 3, 0],
     brasR: [-4, 13, 0], brasL: [-4, 13, 0], avantbrasR: [14, 0, 0], avantbrasL: [14, 0, 0], tete: [-3, 0, -6]},
@@ -10499,7 +10558,10 @@ function miroir(p){
   return r;
 }
 function qPose(nom, cote, fem){
-  var p = POSES[nom]; if (!p) return null; if (fem) p = poseF(p, nom); if (cote === "L") p = miroir(p);
+  var p = POSES[nom]; if (!p) return null; return qDeg(p, cote, fem, nom);
+}
+function qDeg(p, cote, fem, nom){
+  if (fem) p = poseF(p, nom || ""); if (cote === "L") p = miroir(p);
   var q = {}, C = A.C3D;
   Object.keys(p).forEach(function(seg){
     if (seg === "_t") return;
@@ -10755,7 +10817,7 @@ function monter(host, env){
      de la surface touchée si la pièce est centrée. */
   var DIR = {face: 0, profil: -Math.PI / 2, dos: Math.PI};
   /* Vues imposées : celles où le muscle se lit le mieux, quoi qu'en dise sa position. */
-  var VUE_FORCEE = {tibial_anterieur: "face", grand_dorsal: "dos", pec_clav: "face", pec_stern: "face", pec_abd: "face", petit_pectoral: "face", droit_abdomen: "face", oblique_externe: "face", sartorius: "face"};
+  var VUE_FORCEE = {tibial_anterieur: "face", grand_dorsal: "dos", pec_clav: "face", pec_stern: "face", pec_abd: "face", petit_pectoral: "face", droit_abdomen: "face", oblique_externe: "profil", sartorius: "face"};
   function allerVers(e, n){
     if (env.nu || st.libre || e.r0 == null) return false;
     var id = R0[e.r0]; if (id == null || !REGI[id]) return false;
@@ -10789,6 +10851,8 @@ function monter(host, env){
     /* Toucher le vide : la fiche (ou le message) se ferme et le corps reprend ses couleurs. */
     if (k < 0){ fermerFiche(); if (env.fermer && !env.nu) env.fermer(); return; }
     var e = eng.els[k], avait = !elFiche.hidden && st.sel != null && st.sel !== k;
+    /* Jeu « Se tester » : le toucher est une réponse ; la vue ne bouge pas. */
+    if (env.quiz && !env.nu && env.quiz(e, api)){ cacherMsg(); return; }
     var bouge = allerVers(e, n);
     st.sel = k;
     var meme = e.a ? function(x){ return x.a === e.a; } : function(x, i){ return i === k; };
@@ -10840,7 +10904,7 @@ function monter(host, env){
     lblDu = true; eng.redessiner();
   }
   function repos(){ if (!lblDu || mort || !st.lbl || intro) return; lblDu = false; clearTimeout(lblT); lblT = setTimeout(function(){ if (mort || !st.lbl || !eng) return; if (eng.actif()){ lblDu = true; return; } tracerLegendes(); }, 90); }
-  function centreLeg(w){ var m = eng.etat.marge; return env.legDroite ? -1e9 : w / 2 + (m.l - m.r) / 2; }
+  function centreLeg(w){ var m = eng.etat.marge; return env.legDroite ? -1e9 : env.legOpt ? (env.legOpt(w, cv.clientHeight, tel()).cx || w / 2) : w / 2 + (m.l - m.r) / 2; }
   function listeLegendes(w, h, max){ return listeDe(eng.ancres(Math.max(64, Math.round(w / 3)), Math.max(64, Math.round(h / 3))), w, h, max, centreLeg(w)); }
   function listeDe(an, w, h, max, cx){
     var par = {}, ess = env.essentiel && env.essentiel(), ET = st.etiq, IDX = null;
@@ -10874,7 +10938,9 @@ function monter(host, env){
   function tracerLegendes(){
     var w = cv.clientWidth, h = cv.clientHeight, ph = tel(), m = eng.etat.marge, cx = centreLeg(w), nu = !!env.nu;
     /* Les colonnes de noms passent sous les commandes du haut (vue et profondeur à gauche, région et outils à droite). */
-    var L = disposer(listeLegendes(w, h, ph ? 10 : (nu ? 12 : 18)), w, h, {cx: cx, pas: ph ? 24 : 25, haut: ph ? 236 : (nu ? 60 : 250), hautD: ph ? 226 : (nu ? 60 : 84), bas: h - (ph ? 20 : nu ? 60 : 30), xg: ph ? 8 : m.l - 4, xd: w - (ph ? 8 : m.r - 6)});
+    var LO = {cx: cx, pas: ph ? 24 : 25, haut: ph ? 236 : (nu ? 60 : 250), hautD: ph ? 226 : (nu ? 60 : 84), bas: h - (ph ? 20 : nu ? 60 : 30), xg: ph ? 8 : m.l - 4, xd: w - (ph ? 8 : m.r - 6)};
+    if (env.legOpt) Object.assign(LO, env.legOpt(w, h, ph));
+    var L = disposer(listeLegendes(w, h, ph ? 8 : (nu ? 12 : 18)), w, h, LO);
     var svg = "", noms = "";
     L.sort(function(a, b){ return a.ly - b.ly; });
     L.forEach(function(l, i){
@@ -11032,7 +11098,7 @@ function monter(host, env){
     charger(env.urls).then(function(d){
       if (mort) return;
       if (FEM) d = feminiser(d);
-      try { eng = A.C3D.creer(cv, d, {couche: st.c, style: st.rendu, capture: false, exclure: exclure, surImage: function(actif){ if (!actif) repos(); }}); }
+      try { eng = A.C3D.creer(cv, d, {couche: st.c, style: st.rendu, capture: false, transparent: !!env.transparent, exclure: exclure, surImage: function(actif){ if (!actif) repos(); }}); }
       catch (e){ message(T("Ce navigateur n'affiche pas la 3D (WebGL 2 indisponible). La carte du corps reste disponible."), false); if (env.erreur) env.erreur(); return; }
       elEtat.hidden = true; api.eng = eng;
       fCourant = filtre(); eng.filtre(fCourant, 0); eng.zone(null, 0, 0); eng.poser(st.pose && poseNom() ? qPoseM(poseNom(), st.libre ? "R" : cote()) : null, 0); cadrage(0);
@@ -11069,8 +11135,12 @@ function monter(host, env){
     /* Vue : « face », « profil », « dos » (ou un angle, pour les anciens liens). */
     vue: function(v){ if (typeof v === "number") v = v >= 135 ? "dos" : v >= 45 ? "profil" : "face"; setVue(v); },
     legendes: function(v){ st.lbl = !!v; syncUI(); legendes(); },
+    /* Légendes limitées à une liste de structures [{ids, t}] (null : aucune). */
+    etiquettes: function(items){ st.etiq = items || null; st.lbl = !!items; legendes(); },
     /* Exercice : couleurs par rôle (P, S, T) ; null rend les couleurs habituelles. Cadre la région du premier muscle
        principal, vu du côté où il se trouve. */
+    /* Mise en avant d'une structure (null : aucune), sans changer la vue. */
+    surligner: function(id, estomper){ if (eng) eng.selection(id ? function(x){ return x.a === id; } : null, !!estomper); },
     roles: function(m, cadrer){
       st.roles = m || null; teintes();
       if (m && cadrer && eng){
@@ -11095,7 +11165,7 @@ function monter(host, env){
   syncUI(); demarrer();
   return api;
 }
-A.Vue3D = {monter: monter, COUCHES: COUCHES, REG: REG, RENDUS: RENDUS, POSES: POSES, charger: charger, exclure: exclure, feminiser: feminiser, qPose: qPose};
+A.Vue3D = {monter: monter, COUCHES: COUCHES, REG: REG, RENDUS: RENDUS, POSES: POSES, charger: charger, exclure: exclure, feminiser: feminiser, qPose: qPose, qDeg: qDeg};
 })();
 
 var RT = window.ATLAS.RT;
@@ -12448,7 +12518,7 @@ function storyArea(){
     var cap = $('.story-txt > div[data-s="' + Math.max(0, HOME.step) + '"]'), cb = cap ? parseFloat(getComputedStyle(cap).bottom) || 26 : 26;
     var top = cap ? hb - cb - cap.offsetHeight - 14 : hb * 0.6;
     top = Math.max(hb * 0.42, Math.min(hb * 0.66, top));
-    if (HOME.step >= 3 && $("#story.dir")) return {w: w, h: h, phone: true, box: [-w * .1, -8, w * 1.1, top + h * .08], lbl: [0, 0, w, top + 6]};
+    if (HOME.step >= 3 && $("#story.dir")) return {w: w, h: h, phone: true, box: [-w * .2, -6, w * 1.2, top + h * .34], lbl: [0, 0, w, top + 6]};
     return {w: w, h: h, phone: true, box: [0, 10, w, top], lbl: [0, 0, w, top + 6]};
   }
   var txt = $(".story-txt"), tr = txt ? txt.getBoundingClientRect().right - $(".story-stick").getBoundingClientRect().left : w * 0.4;
@@ -12750,7 +12820,7 @@ var LBL_FAM = [
 LBL_FAM.forEach(function(f){ f.t = T(f.t); });
 var DEPTH_LBL = {sup: ["Surface", "Surface"], prof: ["Intermédiaire", "Milieu"], prof2: ["Profond", "Profond"], os: ["Squelette", "Os"]};
 var DEPTH_TXT = {sup: "les muscles visibles sous la peau", prof: "la deuxième couche, sous les muscles de surface", prof2: "les muscles les plus profonds, contre les os", os: "le squelette, les articulations et quelques muscles profonds du tronc"};
-var MODES = [["explorer", "Explorer", I.explore, "Toucher, zoomer, descendre en profondeur"], ["mouvement", "Mouvements", I.move, "Qui produit un geste, qui s'y oppose"], ["exercice", "Exercice", I.dumbbell, "Les muscles d'un exercice, par rôle"], ["recup", "Récupération", I.clock, "Délais avant de solliciter à nouveau"]];
+var MODES = [["explorer", "Explorer", I.explore, "Toucher, zoomer, descendre en profondeur"], ["mouvement", "Mouvements", I.move, "Qui produit un geste, qui s'y oppose"], ["recup", "Récupération", I.clock, "Délais avant de solliciter à nouveau"]];
 function tipHtml(id){ var o = S[id] && S[id].o; if (!o) return esc(id); return "<b>" + esc(o.fr) + "</b>" + (o.la ? '<span class="latin">' + esc(o.la) + "</span>" : ""); }
 function depthIco(i){
   var cols = ["hsl(var(--mh),var(--ms),var(--ml))", "hsl(var(--mh),var(--ms),calc(var(--ml) - 6%))", "hsl(var(--mh),var(--ms),calc(var(--ml) - 12%))", "var(--bone)"];
@@ -15212,7 +15282,8 @@ function c3Env(){
     ficheOuverte: function(){ var sh = $("#sheet"); return !!(sh && !sh.hidden && SH.cur && S[SH.cur.id]); },
     /* Couleur d'un muscle par groupe, la même que sur la carte 2D (palette « Groupes »). */
     groupe: function(id){ return A.Map.GPAL[A.Map.GKEY[id]] || null; },
-    change: function(){ clearTimeout(C3B.t); C3B.t = setTimeout(function(){ if (curView === "corps" && C3B.mode === "explorer") c3Ctx(false); }, 160); },
+    quiz: function(e, v){ return c3Repondre(e, v); },
+    change: function(){ clearTimeout(C3B.t); C3B.t = setTimeout(function(){ if (curView === "corps" && C3B.mode === "explorer") c3Ctx(false); if (curView === "corps" && C3B.mode === "test" && C3.v && C3.v.structures().every(function(x){ return x.id !== C3Q.id; })) c3Test(true); }, 160); },
     essentiel: function(){ return P.prefs.lecture === "ess"; },
     urls: c3Urls(), clair: c3Clair,
     etat: Object.assign({}, C3.mem || {}, {rendu: c3Rendu()}),
@@ -15231,7 +15302,7 @@ RENDER.corps = function(){
    Comme sous la carte 2D : Explorer (les muscles de la région affichée, la légende des groupes) et Exercice (un
    exercice choisi : ses muscles colorés par rôle sur le corps, la vue placée sur le muscle principal). */
 var C3B = {mode: "explorer", ex: null, t: 0};
-var C3_MODES = [["explorer", "Explorer"], ["exercice", "Exercice"]];
+var C3_MODES = [["explorer", "Explorer"], ["test", "Se tester"]];
 function c3Bas(){
   var v = $("#v-corps"); if (!v) return;
   var b = document.createElement("section"); b.className = "c3-bas"; b.setAttribute("aria-label", T("Rubrique du corps en 3D")); v.appendChild(b);
@@ -15240,6 +15311,7 @@ function c3Bas(){
     var t = e.target.closest("button"); if (!t) return;
     if (t.dataset.c3m && t.dataset.c3m !== C3B.mode){ C3B.mode = t.dataset.c3m; c3Modes(); c3Ctx(true); }
     if (t.dataset.c3id && C3.v) C3.v.choisirId(t.dataset.c3id);
+    if (t.dataset.c3q === "passer"){ C3Q.msg = ""; if (C3.v) C3.v.surligner(null); c3Test(true); }
   });
   b.addEventListener("change", function(e){ if (e.target.id === "c3-ex"){ C3B.ex = e.target.value; c3Ctx(true); } });
   c3Modes(); c3Ctx(false);
@@ -15249,9 +15321,39 @@ function c3Chip(id, role){
   var g = A.Map.GPAL[A.Map.GKEY[id]], col = role ? {P: "#ff453a", S: "#ff9f0a", T: "#ffd60a"}[role] : (C3.v && C3.v.etat.grp && g ? g[0] : null);
   return '<button type="button" class="chip" data-c3id="' + esc(id) + '">' + (col ? '<i class="sw" style="background:' + col + '"></i>' : "") + esc(nm(id)) + "</button>";
 }
+/* ---------- Se tester : retrouver un muscle sur le corps ----------
+   Un nom s'affiche ; on touche le muscle sur le corps 3D, dans la vue et la couche affichées. Bonne réponse : le muscle
+   s'allume et un autre nom vient. Erreur : le muscle touché est nommé et le bon s'allume un instant. */
+var C3Q = {id: null, ok: 0, n: 0, serie: 0, msg: "", t: 0, vus: {}};
+function c3QNouveau(){
+  var V = C3.v, L = V && V.structures ? V.structures().filter(function(x){ return S[x.id] && x.id !== C3Q.id; }) : [];
+  if (!L.length){ C3Q.id = null; return; }
+  var frais = L.filter(function(x){ return !C3Q.vus[x.id]; }); if (!frais.length){ C3Q.vus = {}; frais = L; }
+  C3Q.id = frais[Math.floor(Math.random() * Math.min(frais.length, 14))].id; C3Q.vus[C3Q.id] = 1;
+}
+function c3Test(neuf){
+  var c = $("#c3-ctx"), V = C3.v; if (!c) return;
+  if (V) V.roles(null);
+  if (neuf || !C3Q.id) c3QNouveau();
+  var r = V ? V.reg() : null;
+  c.innerHTML = '<div class="c3-test">' +
+    (C3Q.id ? '<span class="eyebrow">' + esc(T("Touche sur le corps")) + (r ? " · " + esc(T(r.n)) : "") + '</span><p class="c3-q">' + esc(nm(C3Q.id)) + "</p>" : '<p class="c3-aide">' + esc(T("Aucun muscle dans cette vue : change de région ou de couche.")) + "</p>") +
+    '<p class="c3-q-msg" aria-live="polite">' + C3Q.msg + "</p>" +
+    '<div class="c3-q-bas"><span class="c3-q-score">' + C3Q.ok + " / " + C3Q.n + (C3Q.serie > 2 ? " · " + esc(T("série")) + " " + C3Q.serie : "") + '</span><button type="button" class="btn sm ghost" data-c3q="passer">' + esc(T("Autre muscle")) + "</button></div></div>";
+}
+function c3Repondre(e, V){
+  if (C3B.mode !== "test" || !C3Q.id || !e) return false;
+  clearTimeout(C3Q.t); C3Q.n++;
+  var juste = e.a === C3Q.id;
+  if (juste){ C3Q.ok++; C3Q.serie++; C3Q.msg = '<b class="ok">' + esc(T("Bien vu.")) + "</b>"; V.surligner(C3Q.id, false); C3Q.t = setTimeout(function(){ C3Q.msg = ""; V.surligner(null); c3Test(true); }, 1100); }
+  else { C3Q.serie = 0; C3Q.msg = '<b class="ko">' + esc(T("Non")) + "</b> : " + esc(T("c'était")) + " " + esc(e.a && S[e.a] ? nm(e.a) : V.nomPiece(e)) + "."; V.surligner(C3Q.id, true); C3Q.t = setTimeout(function(){ V.surligner(null); }, 1600); }
+  c3Test(false);
+  return true;
+}
 function c3Ctx(cadrer){
   var c = $("#c3-ctx"), V = C3.v; if (!c) return;
   destroyFigs(c);
+  if (C3B.mode === "test"){ c3Test(cadrer); return; }
   if (C3B.mode === "exercice"){
     if (!C3B.ex || !S[C3B.ex]) C3B.ex = (A.exercices[0] || {}).id;
     var e = S[C3B.ex] && S[C3B.ex].o, pats = uniq(A.exercices.map(function(x){ return x.pat; }));
@@ -15304,7 +15406,8 @@ function c3Accueil(){
   st.classList.add("a3d");
   var box = document.createElement("div"); box.className = "story-3d"; box.setAttribute("aria-hidden", "true"); stick.insertBefore(box, stick.firstChild);
   var env = c3Env();
-  env.nu = true; env.sansIntro = !!C3.recitVu || HOME.step > 0; env.surEtat = null; env.imprimer = null;
+  env.nu = true; env.transparent = true; env.sansIntro = !!C3.recitVu || HOME.step > 0; env.surEtat = null; env.imprimer = null;
+  env.legOpt = sqLegendes;
   env.etat = {c: 1, r: "", rendu: "nuit", lbl: false, pose: true, libre: c3Portrait()};
   /* Grand cadrage : sur ordinateur, à droite du texte, le buste déborde en bas ; sur téléphone, au-dessus du texte. */
   /* Mesures de mise en page (offsetTop, offsetLeft) : indépendantes des animations du texte. */
@@ -15320,7 +15423,7 @@ function c3Accueil(){
   var vo = document.createElement("i"); vo.className = "story-voile"; box.appendChild(vo);
   /* La 3D arrive : l'écran reste noir (pas de planche) le temps qu'elle charge. */
   SC.cam = null; if (typeof storyScrub === "function"){ storyScrub(); setTimeout(storyScrub, 0); }
-  var io = new IntersectionObserver(function(en){ if (C3.story){ SC.pause = !en[0].isIntersecting || curView !== "accueil" || SC.P > 1.02; C3.story.suspendre(SC.pause); } }, {threshold: 0});
+  var io = new IntersectionObserver(function(en){ if (C3.story){ SC.pause = !en[0].isIntersecting || curView !== "accueil" || SC.P > 2.995; C3.story.suspendre(SC.pause); } }, {threshold: 0});
   io.observe(stick);
 }
 function c3AccueilGo(i){
@@ -15466,7 +15569,7 @@ function storyScrub(){
 function storyTick(t){
   SC.raf = 0; if (curView !== "accueil") return;
   var dt = SC.tl ? Math.min(.05, (t - SC.tl) / 1000) : .016; SC.tl = t;
-  var d = SC.Pt - SC.Ps; SC.Ps += d * (1 - Math.exp(-dt * 4.2)); if (Math.abs(SC.Pt - SC.Ps) < 2e-4) SC.Ps = SC.Pt;
+  var d = SC.Pt - SC.Ps; SC.Ps += d * (1 - Math.exp(-dt * 9)); if (Math.abs(SC.Pt - SC.Ps) < 2e-4) SC.Ps = SC.Pt;
   storyRendu(SC.Ps);
   if (SC.Ps !== SC.Pt) SC.raf = requestAnimationFrame(storyTick);
 }
@@ -15496,9 +15599,9 @@ function storyRendu(Pr){
   if (REDUCED) P = Math.round(Pr);
   var cl = function(x){ return x < 0 ? 0 : x > 1 ? 1 : x; }, ea = function(x){ x = cl(x); return x * x * (3 - 2 * x); };
   var m = HOME.map, host = $("#story-map"), sm = host.parentNode, d3 = $(".story-3d"), fd = $(".story-fond .f-duo"), fp = $(".story-fond .f-pap"), stick = $(".story-stick"), lum = $(".story-lum", stick), fad = $(".story-fade2", stick);
-  var a3d = st.classList.contains("a3d-ok") && C3.story && C3.story.eng;
+  var a3d = st.classList.contains("a3d"), pret = a3d && st.classList.contains("a3d-ok") && C3.story && C3.story.eng;
   SC.P = P;
-  if (C3.story){ var off = P > 1.02; if (off !== SC.pause){ SC.pause = off; C3.story.suspendre(off); } }
+  if (C3.story){ var off = P > 2.995; if (off !== SC.pause){ SC.pause = off; C3.story.suspendre(off); } }
   if (P > .05) m.svg.classList.remove("pop-in");
   var o = 1, rot = 0, sca = 1, view = "face", depth = "sup", vb = null, pa = null, pb = null, pt = 0, duo = 0, pap = 0, fade = 0, sansPlanche = false, faisceau = -1, vig = 0, monte = -1;
   if (!(P >= 2 && P < 3)) scGhost(null);
@@ -15506,6 +15609,9 @@ function storyRendu(Pr){
     /* 04 à 06 : la planche en couleurs, au recadrage habituel. */
     if (d3){ d3.style.opacity = "0"; d3.style.visibility = "hidden"; }
     var hz4 = $(".story-haut", stick); if (hz4) hz4.style.opacity = "0";
+    [d3, fp, lum, fad, hz4].forEach(function(x){ if (x) x.style.transform = ""; });
+    var t3b = $('.story-txt > div[data-s="2"]'); if (t3b && t3b.style.transform){ t3b.style.transform = ""; t3b.style.transition = ""; }
+    if (C3.story && SQ.lbl !== -1){ SQ.lbl = -1; C3.story.etiquettes(null); }
     if (st.classList.contains("clair")) st.classList.remove("clair");
     sm.style.opacity = ""; sm.style.transform = ""; scPal(sm, null); fd.style.opacity = "0"; fp.style.opacity = "0"; lum.style.opacity = "0"; fad.style.opacity = "0";
     stick.style.setProperty("--bg", "#000"); SC.vbCur = "";
@@ -15517,6 +15623,7 @@ function storyRendu(Pr){
     return;
   }
   SC.fin = false;
+  if (a3d && pret && sqRendu(P, Pr)) return;
   if (P < 1){
     var rouge = ea((P - .22) / .62);
     if (a3d){
@@ -15580,6 +15687,134 @@ function scGhost(m, sm){
   var g = sm.cloneNode(true); g.classList.add("story-ghost", "papier-g"); g.setAttribute("aria-hidden", "true");
   $$("[id]", g).forEach(function(x){ x.removeAttribute("id"); }); $$(".lbl-layer", g).forEach(function(x){ x.remove(); });
   sm.parentNode.insertBefore(g, sm); SC.ghost = g; SC.vbCur = "";
+}
+/* ---------- Plan séquence 3D (chapitres 01 à 03) ----------
+   Trois images clés : la statue de dos (01), le corps en trois quarts de profil, bras ballants (02), le corps en trois
+   quarts de dos, regard par-dessus l'épaule (03). Entre deux, chaque partie du corps part à son heure (la tête, puis le
+   buste, puis le bassin, enfin les jambes ; une jambe fait un pas, les bras balancent), et la caméra suit une
+   trajectoire continue (arc, recul, contre-plongée), comme un plan séquence. Tout se calcule à partir de la position du
+   défilement : on peut avancer ou reculer à n'importe quel instant. */
+var SQ = {cle: "", K: null, lbl: -1, k: 0};
+function sqTxt(k){ return $('.story-txt > div[data-s="' + k + '"]'); }
+function sqMarges(k, w, h){
+  var t = sqTxt(k), tx = $(".story-txt"), ok = t && tx && t.offsetHeight, ph = w < 761;
+  if (k === 0 && C3.margesStory) return C3.margesStory(w, h);
+  if (ph){
+    if (k === 2){ var bot = ok ? tx.offsetTop + t.offsetTop + t.offsetHeight : h * .4; return {l: -w * .06, r: -w * .06, t: bot + 4, b: -h * .06}; }
+    var top = ok ? tx.offsetTop + t.offsetTop : h * .5; return {l: -w * .08, r: -w * .08, t: h * .04, b: Math.max(h * .12, h - top + 6)};
+  }
+  var l = ok ? tx.offsetLeft + t.offsetLeft + t.offsetWidth + 20 : w * .42;
+  return {l: l, r: w * .02, t: h * .03, b: h * .03};
+}
+function sqLegendes(w, h, ph){
+  var k = SQ.k, t = sqTxt(k), tx = $(".story-txt"), ok = t && tx && t.offsetHeight;
+  if (ph){
+    if (k === 2){ var bot = ok ? tx.offsetTop + t.offsetTop + t.offsetHeight : h * .4; return {cx: w / 2, haut: bot + 24, hautD: bot + 24, bas: h - 70, xg: 8, xd: w - 8}; }
+    var top = ok ? tx.offsetTop + t.offsetTop : h * .55; return {cx: w / 2, haut: 70, hautD: 70, bas: top - 18, xg: 8, xd: w - 8};
+  }
+  var x0 = ok ? tx.offsetLeft + t.offsetLeft + t.offsetWidth + 24 : w * .42;
+  return {cx: (x0 + w) / 2, haut: h * .1, hautD: h * .1, bas: h * .86, xg: x0 + 200, xd: w - 300};
+}
+var SQ_POSES = ["statue", "tourne34", "dosArc"];
+function sqPrep(){
+  var V = C3.story, E = V && V.eng, box = $(".story-3d"); if (!E || !box) return null;
+  var w = box.clientWidth, h = box.clientHeight; if (!w || !h) return null;
+  var cle = w + "x" + h + (V.feminin ? "f" : "m"); if (SQ.cle === cle && SQ.K) return SQ.K;
+  var PS = A.Vue3D.POSES, D2R = Math.PI / 180, q = function(n){ return A.Vue3D.qDeg(PS[n], "R", V.feminin, n); };
+  var P0 = c3Portrait(), m0 = sqMarges(0, w, h), m1 = sqMarges(1, w, h), m2 = sqMarges(2, w, h);
+  var b0 = E.boitePosee(q("statue"), null, P0.bb) || P0.bb;
+  /* Gros plan 02 : l'épaule, le bras et la poitrine du côté droit. Gros plan 03 : le haut du dos, les épaules, la tête. */
+  var b1 = E.boitePosee(q("tourne34"), function(e){ return (e.r0 === 1 || e.r0 === 3 || e.r0 === 4) && e.s !== "L"; }, [[-.6, 1.02, -.6], [.6, 1.6, .6]]) || P0.bb;
+  var b2 = E.boitePosee(q("dosArc"), function(e){ return e.r0 === 0 || e.r0 === 1 || e.r0 === 3 || e.r0 === 4; }, [[-.6, 1.1, -.6], [.6, 1.84, .6]]) || P0.bb;
+  SQ.K = {w: w, h: h, m: [m0, m1, m2], c: [
+    E.camPour(b0, P0.yaw * D2R, P0.pitch * D2R, P0.k, m0),
+    E.camPour(b1, 4 * D2R, -7 * D2R, .86, m1),
+    E.camPour(b2, 10 * D2R, 3 * D2R, .84, m2)
+  ]};
+  SQ.cle = cle; SQ.lbl = -1;
+  return SQ.K;
+}
+/* Mouvement d'une partie du corps : départ retardé, durée, accélération puis freinage très doux. */
+function sqEase(u, d, l){ var x = Math.max(0, Math.min(1, (u - d) / l)); return x * x * x * (x * (x * 6 - 15) + 10); }
+var SQ_TEMPS = [
+  /* 01 → 02 : la tête mène, le buste suit, puis le bassin, enfin les jambes. */
+  {tete: [0, .62], cou: [.02, .64], thorax: [.08, .7], lombaire: [.12, .7], ceinture: [.1, .72], bras: [.14, .74], avantbras: [.18, .74], main: [.2, .74], bassin: [.16, .76], cuisse: [.22, .74], jambe: [.24, .74], pied: [.26, .72]},
+  /* 02 → 03 : le bassin et le buste tournent, la tête attend puis se retourne vers l'épaule. */
+  {bassin: [.04, .74], lombaire: [.06, .74], thorax: [.1, .72], ceinture: [.12, .72], bras: [.12, .76], avantbras: [.16, .76], main: [.18, .76], cuisse: [.08, .76], jambe: [.1, .76], pied: [.12, .76], cou: [.3, .66], tete: [.34, .66]}
+];
+function sqPose(i, u){
+  var PS = A.Vue3D.POSES, a = PS[SQ_POSES[i]], b = PS[SQ_POSES[i + 1]], T = SQ_TEMPS[i], out = {};
+  var segs = {}; Object.keys(a).concat(Object.keys(b)).forEach(function(k){ if (k !== "_t") segs[k] = 1; });
+  Object.keys(segs).forEach(function(k){
+    var base = k.replace(/[LR]$/, ""), tt = T[base] || [.1, .8], e = sqEase(u, tt[0], tt[1]), va = a[k] || [0, 0, 0], vb = b[k] || [0, 0, 0];
+    out[k] = [va[0] + (vb[0] - va[0]) * e, va[1] + (vb[1] - va[1]) * e, va[2] + (vb[2] - va[2]) * e];
+  });
+  /* Un pas : la jambe qui se libère se lève et se replie au milieu du mouvement ; les bras balancent. */
+  var pas = Math.sin(Math.PI * sqEase(u, .2, .6)), lib = i === 0 ? "L" : "R", ap = lib === "L" ? "R" : "L";
+  var add = function(k, v){ var o = out[k] || [0, 0, 0]; out[k] = [o[0] + v[0], o[1] + v[1], o[2] + v[2]]; };
+  add("cuisse" + lib, [16 * pas, 2 * pas, 0]); add("jambe" + lib, [26 * pas, 0, 0]); add("pied" + lib, [10 * pas, 0, 0]);
+  add("cuisse" + ap, [-3 * pas, 0, 0]); add("bassin", [0, (lib === "L" ? -3 : 3) * pas, 0]);
+  var bal = Math.sin(Math.PI * 2 * sqEase(u, .16, .7)) * Math.sin(Math.PI * sqEase(u, .16, .7));
+  add("brasR", [9 * bal, 2 * Math.abs(bal), 0]); add("brasL", [-9 * bal, 2 * Math.abs(bal), 0]);
+  add("avantbrasR", [6 * Math.abs(bal), 0, 0]); add("avantbrasL", [6 * Math.abs(bal), 0, 0]);
+  return out;
+}
+/* Caméra : entre deux images clés, interpolation enveloppée, plus un arc (cap), un recul et une contre-plongée qui
+   culminent au milieu du mouvement. */
+function sqCam(K, i, u){
+  var A0 = K.c[i], B0 = K.c[i + 1], ma = K.m[i], mb = K.m[i + 1], e = sqEase(u, 0, 1), arc = Math.sin(Math.PI * sqEase(u, .02, .96)), cam = {}, mg = {};
+  ["yaw", "pitch", "dist", "tx", "ty", "tz"].forEach(function(k){ cam[k] = A0[k] + (B0[k] - A0[k]) * e; });
+  cam.yaw += (i === 0 ? -.42 : .34) * arc; cam.pitch -= (i === 0 ? .1 : .06) * arc; cam.dist *= 1 + (i === 0 ? .22 : .16) * arc;
+  ["l", "r", "t", "b"].forEach(function(k){ mg[k] = ma[k] + (mb[k] - ma[k]) * e; });
+  return {cam: cam, mg: mg};
+}
+function sqRendu(P, Pr){
+  if (P >= 3) return false;
+  var V = C3.story, E = V && V.eng, K = sqPrep(); if (!K) return false;
+  var st = $("#story.dir"), m = HOME.map, host = $("#story-map"), sm = host.parentNode, d3 = $(".story-3d"), stick = $(".story-stick");
+  var fd = $(".story-fond .f-duo"), fp = $(".story-fond .f-pap"), lum = $(".story-lum", stick), fad = $(".story-fade2", stick), hz = $(".story-haut", stick), fx = $(".story-faisceau", stick), vg = $(".story-vig", stick);
+  var cl = function(x){ return x < 0 ? 0 : x > 1 ? 1 : x; }, sm2 = function(x){ x = cl(x); return x * x * (3 - 2 * x); };
+  scGhost(null);
+  /* Corps et caméra. */
+  var i = Math.min(1, Math.floor(Math.min(P, 2))), u = Math.min(P, 2) - i, monte = P > 2 ? P - 2 : 0;
+  var pose = sqPose(i, u), c = sqCam(K, i, u);
+  E.poserMelange(A.Vue3D.qDeg(pose, "R", V.feminin, "seq"), null, 0); E.regler(c.cam, c.mg);
+  /* Corps de plus en plus sombre et profond ; lumière qui vire au rouge en 02, puis redevient neutre sur le papier. */
+  var sombre = P < 1 ? sm2(P / .8) : 1;
+  E.melange("nuit", "abysse", sombre);
+  var rouge = P < 1 ? sm2((P - .18) / .7) : P < 2 ? 1 - sm2((P - 1.25) / .5) : 0;
+  E.teinteLumiere([1, .08, .06], rouge * .85);
+  /* Fonds : noir, écarlate, papier. */
+  var pap = P < 1 ? 0 : P < 2 ? sm2((P - 1.3) / .45) : 1;
+  fd.style.opacity = (P < 1 ? rouge : P < 2 ? 1 - pap : 0).toFixed(3);
+  var mt = P > 2 ? 1 - sm2((P - 2) / .12) : 1;
+  fp.style.opacity = pap.toFixed(3); lum.style.opacity = (pap * mt).toFixed(3); fad.style.opacity = ((P >= 2 ? 1 : pap * .9) * mt).toFixed(3); if (hz) hz.style.opacity = (pap * mt).toFixed(3);
+  fp.classList.toggle("page", P > 2);
+  if (fx) fx.style.opacity = "0";
+  if (vg) vg.style.opacity = (P < 2 ? Math.sin(Math.PI * cl(P % 1)) * .35 : 0).toFixed(3);
+  st.classList.toggle("clair", pap > .5);
+  stick.style.setProperty("--bg", pap > .5 ? "#ebe8e1" : P >= 1 ? "#3e050a" : "#000");
+  d3.style.visibility = "visible"; d3.style.opacity = "1";
+  /* 03 → 04 : la scène du dos (papier, corps, texte) monte comme une page ; la planche 04 arrive par le bas sur le noir. */
+  var haut = monte > 0 ? "translate3d(0," + (-monte * 100).toFixed(3) + "%,0)" : "";
+  [d3, fp, lum, fad, hz].forEach(function(x){ if (x) x.style.transform = haut; });
+  var t3 = sqTxt(2);
+  if (t3){ if (monte > 0){ t3.style.transition = "none"; t3.style.transform = "translate3d(0," + (-monte * stick.clientHeight).toFixed(1) + "px,0)"; } else if (t3.style.transform){ t3.style.transform = ""; t3.style.transition = ""; } }
+  if (monte > 0){
+    var s4 = STORY[3];
+    if (m.view() !== s4.v) m.setView(s4.v); if (m.depth() !== s4.d) m.setDepth(s4.d); m.svg.classList.remove("pal-g", "pop-in");
+    var vk = SC.vb[3].map(function(x){ return x.toFixed(2); }).join(); if (vk !== SC.vbCur){ SC.vbCur = vk; m.frameTo(SC.vb[3], 0); }
+    scPal(sm, null); sm.classList.remove("sc-pap", "sc-duo");
+    sm.style.opacity = "1"; sm.style.transform = "translate3d(0," + ((1 - monte) * 100).toFixed(3) + "%,0)";
+    if (monte > .5){ st.classList.remove("clair"); stick.style.setProperty("--bg", "#000"); }
+  } else { sm.style.opacity = "0"; sm.style.transform = ""; }
+  HOME.lbl.hide(true); SC.lblK = -1;
+  /* Légendes 3D : seulement quand une image clé est posée (chapitres 02 et 03). */
+  var kN = Math.round(P), posee = Math.abs(P - kN) < .004 && kN >= 1 && kN <= 2 && monte === 0;
+  SQ.k = kN;
+  if (posee && SQ.lbl !== kN){ SQ.lbl = kN; V.etiquettes(STORY[kN].items); }
+  else if (!posee && SQ.lbl !== -1){ SQ.lbl = -1; V.etiquettes(null); }
+  return true;
 }
 /* Chapitres 04 à 06 : les muscles de la planche disparaissent (du haut vers le bas, vite), puis ceux de la planche
    suivante apparaissent l'un après l'autre, comme à l'ouverture de la carte. */
