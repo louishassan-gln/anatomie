@@ -1,6 +1,6 @@
 /* Anatomie — service worker (fait par tools/publier_github.py, ne pas modifier à la main).
    La page et les voix restent sur l'appareil : le site s'ouvre et se lit hors connexion. */
-const V = "72b928d51a", APP = "anatomie-app-" + V, VOIX = "anatomie-voix-7eaa011045";
+const V = "492ea6d404", APP = "anatomie-app-" + V, VOIX = "anatomie-voix-82362e96cd";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png", "3d/corps3d.bin"];
 const FILES = ["voice/mp3/en-1-1.mp3", "voice/mp3/en-1-2.mp3", "voice/mp3/en-1-3.mp3", "voice/mp3/en-2-1.mp3", "voice/mp3/en-2-2.mp3", "voice/mp3/en-2-3.mp3", "voice/mp3/en-3-1.mp3", "voice/mp3/en-3-2.mp3", "voice/mp3/en-3-3.mp3", "voice/mp3/en-4-1.mp3", "voice/mp3/en-4-2.mp3", "voice/mp3/en-4-3.mp3", "voice/mp3/en-4-4.mp3", "voice/mp3/en-5-1.mp3", "voice/mp3/en-5-2.mp3", "voice/mp3/en-5-3.mp3", "voice/mp3/en-5-4.mp3", "voice/mp3/en-5-5.mp3", "voice/mp3/en-6-1.mp3", "voice/mp3/en-6-2.mp3", "voice/mp3/en-6-3.mp3", "voice/mp3/en-6-4.mp3", "voice/mp3/en-6-5.mp3", "voice/mp3/en-7-1.mp3", "voice/mp3/en-7-2.mp3", "voice/mp3/en-8-1.mp3", "voice/mp3/en-8-2.mp3", "voice/mp3/en-8-3.mp3", "voice/mp3/en-8-4.mp3", "voice/mp3/en-8-5.mp3", "voice/mp3/en-visite-1.mp3", "voice/mp3/en-visite-2.mp3", "voice/mp3/en-visite-3.mp3", "voice/mp3/en-visite-4.mp3", "voice/mp3/en-visite-5.mp3", "voice/mp3/en-visite-6.mp3", "voice/mp3/fr-1-1.mp3", "voice/mp3/fr-1-2.mp3", "voice/mp3/fr-1-3.mp3", "voice/mp3/fr-2-1.mp3", "voice/mp3/fr-2-2.mp3", "voice/mp3/fr-2-3.mp3", "voice/mp3/fr-3-1.mp3", "voice/mp3/fr-3-2.mp3", "voice/mp3/fr-3-3.mp3", "voice/mp3/fr-4-1.mp3", "voice/mp3/fr-4-2.mp3", "voice/mp3/fr-4-3.mp3", "voice/mp3/fr-4-4.mp3", "voice/mp3/fr-5-1.mp3", "voice/mp3/fr-5-2.mp3", "voice/mp3/fr-5-3.mp3", "voice/mp3/fr-5-4.mp3", "voice/mp3/fr-5-5.mp3", "voice/mp3/fr-6-1.mp3", "voice/mp3/fr-6-2.mp3", "voice/mp3/fr-6-3.mp3", "voice/mp3/fr-6-4.mp3", "voice/mp3/fr-6-5.mp3", "voice/mp3/fr-7-1.mp3", "voice/mp3/fr-7-2.mp3", "voice/mp3/fr-8-1.mp3", "voice/mp3/fr-8-2.mp3", "voice/mp3/fr-8-3.mp3", "voice/mp3/fr-8-4.mp3", "voice/mp3/fr-8-5.mp3", "voice/mp3/fr-visite-1.mp3", "voice/mp3/fr-visite-2.mp3", "voice/mp3/fr-visite-3.mp3", "voice/mp3/fr-visite-4.mp3", "voice/mp3/fr-visite-5.mp3", "voice/mp3/fr-visite-6.mp3"];
 const abs = p => new URL(p, self.registration.scope).href;
@@ -23,6 +23,11 @@ self.addEventListener("fetch", e => {
   const url = new URL(req.url);
   if (url.origin !== location.origin) return;
   if (url.pathname.indexOf("/voice/mp3/") >= 0){ e.respondWith(voix(req)); return; }
+  /* Ombres des planches 2D : gardées sur l'appareil à la première ouverture. */
+  if (url.pathname.indexOf("/3d/ombres/") >= 0){
+    e.respondWith(caches.open(APP).then(c => c.match(req, {ignoreSearch: true}).then(r => r || fetch(req).then(n => { if (n.ok && n.status === 200) c.put(req, n.clone()); return n; }))));
+    return;
+  }
   if (req.mode === "navigate"){
     e.respondWith(caches.open(APP).then(c => c.match(abs("index.html"))).then(r => r || fetch(req)));
     return;
