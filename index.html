@@ -2158,7 +2158,7 @@ html[data-rendu="epure"] .atlas-svg .ombre2d{display:none}
 /* ---------- v16 : ombres synchronisées, cibles tactiles, gestes ---------- */
 /* Calque prêt d'avance : affiché d'emblée, sans fondu. Il disparaît avec les muscles de la planche. */
 .atlas-svg .ombre2d.imm{transition:none}
-.atlas-svg.pop-out .ombre2d{opacity:0 !important; transition:opacity .22s ease-in}
+.atlas-svg .ombre2d[mask]{transition:none}
 /* Scène 3D : le doigt tourne la vue (horizontalement et verticalement) ; la page défile depuis la rubrique, sous la
    scène, toujours visible en bas sur téléphone. */
 .c3:not(.c3-nu) .c3-cv{touch-action:none}
@@ -2174,14 +2174,7 @@ html[data-rendu="epure"] .atlas-svg .ombre2d{display:none}
 }
 .c3-tl{left:max(10px, env(safe-area-inset-left))} .c3-outils{right:max(10px, env(safe-area-inset-right))}
 .c3-zoom{right:max(10px, env(safe-area-inset-right))}
-/* Planches 2D : fibres dessinées en traits vectoriels (rétablies). */
-.fb-l{fill:none; stroke:rgba(48,6,5,.52); stroke-width:.44; stroke-linecap:round}
-.fb-l.b{stroke:rgba(48,6,5,.4); stroke-width:.34}
-.atlas-svg .fibres{pointer-events:none}
-.atlas-svg .fibres .fb{stroke:none; fill:rgb(46, 6, 5)}
-.atlas-svg .fibres .fb-c{fill:none; stroke:rgb(255, 222, 200); stroke-width:.38; stroke-linecap:round; stroke-linejoin:round}
-html[data-rendu="epure"] .atlas-svg .fibres{display:none}
-.atlas-svg.pop-out .fibres{opacity:0; transition:opacity .22s ease-in}
+
 /* Les conteneurs des commandes de la vue 3D ne captent pas les gestes : seuls leurs boutons sont actifs (un muscle
    touché sous la zone vide d'un sélecteur se désigne normalement). */
 .c3-tl, .c3-outils, .c3-zone, .c3-prof, .c3 .deplie, .c3 .dp-liste, .c3-vue{pointer-events:none}
@@ -8501,162 +8494,6 @@ function silD(key, rs){
   var v = key.split("|")[0], d = mittens((rs || []).map(dec), key.indexOf("dos|") === 0).map(function(p){ return epaissir(p, v); }).map(smooth).join("");
   DCACHE[key] = d; return d;
 }
-/* Fibres des planches : dans chaque muscle, des fuseaux fins orientés comme ses fibres (direction tirée du modèle 3D,
-   ATLAS.FIB2D.angles : la pièce du muscle la plus proche sur la planche ; sinon l'axe de la forme). Chaque fuseau est
-   plein au centre et s'effile en pointe à ses deux bouts ; les fuseaux sont plus épais au centre du muscle (le ventre)
-   et s'affinent vers ses extrémités (les tendons) ; ils s'estompent dans les hautes lumières (carte de lumière calculée
-   depuis la 3D, ATLAS.FIB2D.lum). Formes vectorielles : nettes à tout zoom. */
-var FIB_FORCE = {oblique_externe: 135}, FIB_LUM = {};
-function fibAngle(v, id, inf){
-  if (FIB_FORCE[id] != null) return inf.cx < W / 2 ? FIB_FORCE[id] : 180 - FIB_FORCE[id];
-  var F = ATLAS.FIB2D && ATLAS.FIB2D.angles && ATLAS.FIB2D.angles[v], best = null, bd = 1e9;
-  if (F) F.forEach(function(e){ if (e[4] !== id) return; var dd = (e[0] - inf.cx) * (e[0] - inf.cx) + (e[1] - inf.cy) * (e[1] - inf.cy); if (dd < bd){ bd = dd; best = e; } });
-  if (best && bd < 8100) return best[2];
-  var sxx = 0, syy = 0, sxy = 0; inf.pts.forEach(function(q){ var x = q[0] - inf.cx, y = q[1] - inf.cy; sxx += x * x; syy += y * y; sxy += x * y; });
-  var th = .5 * Math.atan2(2 * sxy, sxx - syy), a = Math.atan2(-Math.cos(th), Math.sin(th)) * 180 / Math.PI; return ((a % 180) + 180) % 180;
-}
-/* Lumière reçue au point (x, y) de la planche, de 0 (ombre) à 1 (pleine lumière). */
-function fibLum(v, d, x, y){
-  var B = ATLAS.body2, key = (ATLAS.body2f && B === ATLAS.body2f ? "f" : "m") + "-" + v + "-" + d, L = FIB_LUM[key];
-  if (L === undefined){ var s = ATLAS.FIB2D && ATLAS.FIB2D.lum && ATLAS.FIB2D.lum[key]; if (s){ var bin = atob(s); L = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) L[i] = bin.charCodeAt(i); } else L = null; FIB_LUM[key] = L; }
-  if (!L) return .5;
-  var gx = Math.max(0, Math.min(39, Math.floor(x / 10))), gy = Math.max(0, Math.min(89, Math.floor(y / 10)));
-  return L[gy * 40 + gx] / 255;
-}
-function f1(x){ return Math.round(x * 10) / 10; }
-/* Champ des fibres d'un muscle : un potentiel harmonique (équation de Laplace), comme dans la reconstruction des
-   faisceaux musculaires de Choi et Blemker (PLOS ONE, 2013, CC BY) : flux uniforme entrant à l'attache d'origine et
-   sortant à l'insertion (les deux extrémités du muscle le long de l'axe de ses fibres, d'après le modèle 3D), aucun
-   flux à travers le reste du contour. Les fibres sont les lignes de ce champ : elles vont d'une attache à l'autre en
-   épousant la forme du muscle, s'écartent ou se resserrent avec lui, sans jamais se croiser ni boucler. Résolution sur
-   une grille d'environ 30 cellules de large (relaxation successive). */
-function fibContour(pts){ var n = pts.length, k = Math.max(1, Math.ceil(n / 64)), P = []; for (var i = 0; i < n; i += k) P.push(pts[i]); return P; }
-function fibDans(P, x, y){ var c = false; for (var i = 0, j = P.length - 1; i < P.length; j = i++){ var a = P[i], b = P[j]; if ((a[1] > y) !== (b[1] > y) && x < (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]) + a[0]) c = !c; } return c; }
-function fibChamp(P, inf, ux, uy){
-  var h = Math.max(1, Math.min(4, Math.sqrt(inf.area) / 24)), x0 = inf.x0 - h, y0 = inf.y0 - h, nx = Math.ceil((inf.x1 - x0) / h) + 2, ny = Math.ceil((inf.y1 - y0) / h) + 2;
-  var N = nx * ny, IN = new Uint8Array(N), T = new Float32Array(N), F = new Float32Array(N), B = new Float32Array(N), i, j, k, tMin = 1e9, tMax = -1e9, m = P.length;
-  /* Intérieur par balayage des lignes (croisements du contour), puis l'abscisse le long des fibres. */
-  for (j = 0; j < ny; j++){
-    var y = y0 + (j + .5) * h, X = [];
-    for (var a = 0, b = m - 1; a < m; b = a++){ var p = P[a], q = P[b]; if ((p[1] > y) !== (q[1] > y)) X.push(p[0] + (y - p[1]) * (q[0] - p[0]) / (q[1] - p[1])); }
-    X.sort(function(u, v){ return u - v; });
-    for (var c = 0; c + 1 < X.length; c += 2){
-      var i0 = Math.max(0, Math.ceil((X[c] - x0) / h - .5)), i1 = Math.min(nx - 1, Math.floor((X[c + 1] - x0) / h - .5));
-      for (i = i0; i <= i1; i++){ k = j * nx + i; IN[k] = 1; T[k] = (x0 + (i + .5) * h) * ux + y * uy; if (T[k] < tMin) tMin = T[k]; if (T[k] > tMax) tMax = T[k]; }
-    }
-  }
-  var L = tMax - tMin; if (!(L > h * 2)) return null;
-  /* Attaches : les cellules du bord situées dans le premier et le dernier cinquième du muscle, le long de ses fibres. */
-  var no = 0, ni = 0;
-  for (k = nx; k < N - nx; k++){ if (!IN[k]) continue; if (IN[k - 1] && IN[k + 1] && IN[k - nx] && IN[k + nx]) continue; if (T[k] < tMin + L * .2){ B[k] = 1; no++; } else if (T[k] > tMax - L * .2){ B[k] = -1; ni++; } }
-  if (!no || !ni) return null;
-  for (k = 0; k < N; k++){ if (B[k] < 0) B[k] = -no / ni; F[k] = IN[k] ? (tMax - T[k]) / h : 0; }
-  /* Relaxation successive sur les seules cellules intérieures. */
-  var Q = []; for (k = nx; k < N - nx; k++) if (IN[k]) Q.push(k);
-  for (var it = 0; it < 90; it++) for (var z = 0; z < Q.length; z++){
-    k = Q[z]; var s = 0, cc = 0;
-    if (IN[k - 1]){ s += F[k - 1]; cc++; } if (IN[k + 1]){ s += F[k + 1]; cc++; } if (IN[k - nx]){ s += F[k - nx]; cc++; } if (IN[k + nx]){ s += F[k + nx]; cc++; }
-    if (cc) F[k] += 1.85 * ((s + B[k]) / cc - F[k]);
-  }
-  return {F: F, IN: IN, nx: nx, ny: ny, h: h, x0: x0, y0: y0};
-}
-/* Le point (x, y) est-il dans le muscle ? (cellule de la grille) */
-function fibIn(C, x, y){ var i = Math.floor((x - C.x0) / C.h), j = Math.floor((y - C.y0) / C.h); return i >= 0 && j >= 0 && i < C.nx && j < C.ny && C.IN[j * C.nx + i] === 1; }
-/* Direction des fibres au point (x, y) : le gradient du potentiel, interpolé. */
-function fibGrad(C, x, y){
-  var fx = (x - C.x0) / C.h - .5, fy = (y - C.y0) / C.h - .5, i = Math.floor(fx), j = Math.floor(fy), gx = 0, gy = 0, wt = 0;
-  for (var dj = 0; dj < 2; dj++) for (var di = 0; di < 2; di++){
-    var ii = i + di, jj = j + dj; if (ii < 1 || jj < 1 || ii >= C.nx - 1 || jj >= C.ny - 1) continue; var k = jj * C.nx + ii; if (!C.IN[k]) continue;
-    var w = (di ? fx - i : 1 - (fx - i)) * (dj ? fy - j : 1 - (fy - j)); if (w <= 0) continue;
-    var l = C.IN[k - 1] ? C.F[k - 1] : C.F[k], r = C.IN[k + 1] ? C.F[k + 1] : C.F[k], u = C.IN[k - C.nx] ? C.F[k - C.nx] : C.F[k], dn = C.IN[k + C.nx] ? C.F[k + C.nx] : C.F[k];
-    gx += (r - l) * w; gy += (dn - u) * w; wt += w;
-  }
-  if (!wt) return null; var gl = Math.hypot(gx, gy); return gl > 1e-6 ? [gx / gl, gy / gl] : null;
-}
-/* Une fibre : partie d'un point intérieur, elle suit le champ dans les deux sens jusqu'au bord (pas de Runge-Kutta). */
-function fibLigne(P, C, sx, sy){
-  var res = [[sx, sy]], st = C.h * .6;
-  [1, -1].forEach(function(sg){
-    var x = sx, y = sy, L = [];
-    for (var s = 0; s < 400; s++){
-      var g1 = fibGrad(C, x, y); if (!g1) break;
-      var g2 = fibGrad(C, x + g1[0] * sg * st * .5, y + g1[1] * sg * st * .5) || g1;
-      x += g2[0] * sg * st; y += g2[1] * sg * st; if (!fibIn(C, x, y)) break; L.push([x, y]);
-    }
-    res = sg > 0 ? res.concat(L) : L.reverse().concat(res);
-  });
-  return res;
-}
-/* Rééchantillonne une ligne en n points régulièrement espacés. */
-function fibEch(L, n){
-  var c = [0]; for (var i = 1; i < L.length; i++) c.push(c[i - 1] + Math.hypot(L[i][0] - L[i - 1][0], L[i][1] - L[i - 1][1]));
-  var T = c[c.length - 1], out = [], j = 0; if (T < 1e-3) return null;
-  for (var k = 0; k < n; k++){ var s = T * k / (n - 1); while (j < c.length - 2 && c[j + 1] < s) j++; var u = (s - c[j]) / ((c[j + 1] - c[j]) || 1); out.push([L[j][0] + (L[j + 1][0] - L[j][0]) * u, L[j][1] + (L[j + 1][1] - L[j][1]) * u]); }
-  return {p: out, len: T};
-}
-/* Les fibres d'une planche se calculent une fois (cache partagé par toutes les cartes), et à l'avance, quand le
-   navigateur est libre, pour les autres plans : changer de profondeur reste immédiat. */
-var FIB_CACHE = {}, FIB_KIND = null;
-function fibresMarkup(v, d, L, kindOf){
-  FIB_KIND = kindOf;
-  var key = (ATLAS.body2f && ATLAS.body2 === ATLAS.body2f ? "f" : "m") + "|" + v + "|" + d;
-  if (FIB_CACHE[key] == null) FIB_CACHE[key] = fibresCalcul(v, d, L, kindOf);
-  return FIB_CACHE[key];
-}
-function fibresCalcul(v, d, L, kindOf){
-  if (d === "os" || !ATLAS.body2.genere) return "";
-  /* Faisceaux dessinés comme sur une planche gravée : chaque fibre est un fuseau sombre (le sillon), plein au centre,
-     effilé en pointe aux deux bouts, doublé d'une arête claire du côté de la lumière (le relief) ; une fibre sur trois,
-     plus marquée, sépare les faisceaux. Fuseaux plus épais au ventre du muscle, plus fins vers les tendons ; le sillon
-     s'estompe dans les hautes lumières, l'arête dans l'ombre. */
-  var D = ["", "", "", ""], C = ["", "", ""], OPD = [.2, .34, .48, .62], OPC = [.1, .17, .24], ESP = 2.7;
-  var lx = v === "dos" ? .62 : -.62, ly = -.78;
-  Object.keys(L.paths).forEach(function(id){
-    if (kindOf(id) !== "muscle") return;
-    (L.paths[id] || []).forEach(function(r, ri){
-      var pts = decv(r, v), inf = ringInfo(pts); if (inf.area < 30) return;
-      var P = fibContour(pts), th = fibAngle(v, id, inf) * Math.PI / 180, ux = -Math.sin(th), uy = Math.cos(th), nx = Math.cos(th), ny = Math.sin(th);
-      var CH = fibChamp(P, inf, ux, uy); if (!CH) return;
-      var tMin = 1e9, tMax = -1e9, oMin = 1e9, oMax = -1e9, n = pts.length, k;
-      for (k = 0; k < n; k++){ var t = pts[k][0] * ux + pts[k][1] * uy, o = pts[k][0] * nx + pts[k][1] * ny; if (t < tMin) tMin = t; if (t > tMax) tMax = t; if (o < oMin) oMin = o; if (o > oMax) oMax = o; }
-      var tc = (tMin + tMax) / 2, th2 = Math.max(4, (tMax - tMin) / 2), R = Math.max(2.2, (oMax - oMin) * .2), seed = (id.length * 7 + ri * 13) % 17;
-      for (var j = 0, off = oMin + ESP * .55; off < oMax - ESP * .3; j++, off += ESP * (.8 + .4 * (((j * 7 + seed) % 11) / 10))){
-        /* Point de départ : le milieu de la traversée du muscle à cette hauteur. */
-        var X = [];
-        for (k = 0; k < n; k++){
-          var p = pts[k], q = pts[(k + 1) % n], op = p[0] * nx + p[1] * ny - off, oq = q[0] * nx + q[1] * ny - off;
-          if ((op > 0) !== (oq > 0)){ var a = op / (op - oq); X.push((p[0] + (q[0] - p[0]) * a) * ux + (p[1] + (q[1] - p[1]) * a) * uy); }
-        }
-        X.sort(function(a, b){ return a - b; });
-        for (k = 0; k + 1 < X.length; k += 2){
-          if (X[k + 1] - X[k] < 4) continue;
-          var tm0 = Math.max(X[k] + 1, Math.min(X[k + 1] - 1, tc)), sx = ux * tm0 + nx * off, sy = uy * tm0 + ny * off;
-          var ech = fibEch(fibLigne(P, CH, sx, sy), 9); if (!ech || ech.len < 4) continue;
-          var Q = ech.p, mid = Q[4], ventre = Math.max(0, 1 - Math.pow(Math.abs((mid[0] * ux + mid[1] * uy) - tc) / th2, 1.6));
-          var fort = j % 3 === 0 ? 1.55 : 1, wmax = (.2 + .55 * ventre) * fort * Math.min(1, Math.max(.4, ech.len / 24));
-          var li = fibLum(v, d, mid[0], mid[1]);
-          var aD = .64 * (1 - .9 * Math.max(0, Math.min(1, (li - .55) / .32))) * (.55 + .45 * ventre) * (fort > 1 ? 1.15 : 1);
-          var aC = .36 * Math.max(0, Math.min(1, (li - .18) / .35)) * (.5 + .5 * ventre);
-          /* Fuseau : les deux bords, plein au centre, effilés aux bouts. */
-          var g = "", dr = "", cl = "";
-          for (var i = 0; i < 9; i++){
-            var a0 = Q[Math.max(0, i - 1)], a1 = Q[Math.min(8, i + 1)], tx = a1[0] - a0[0], ty = a1[1] - a0[1], tl = Math.hypot(tx, ty) || 1, px = -ty / tl, py = tx / tl;
-            var w = wmax * Math.pow(Math.sin(Math.PI * i / 8), .75);
-            g += (i ? "L" : "M") + f1(Q[i][0] + px * w) + " " + f1(Q[i][1] + py * w);
-            dr = "L" + f1(Q[i][0] - px * w) + " " + f1(Q[i][1] - py * w) + dr;
-            if (i >= 1 && i <= 7){ var sg = px * lx + py * ly >= 0 ? 1 : -1, ow = w + .5; cl += (i === 1 ? "M" : "L") + f1(Q[i][0] + px * sg * ow) + " " + f1(Q[i][1] + py * sg * ow); }
-          }
-          if (aD >= .08){ var b = aD < .24 ? 0 : aD < .38 ? 1 : aD < .52 ? 2 : 3; D[b] += g + dr + "Z"; }
-          if (aC >= .06){ var c = aC < .18 ? 0 : aC < .28 ? 1 : 2; C[c] += cl; }
-        }
-      }
-    });
-  });
-  var h = "";
-  C.forEach(function(dd, b){ if (dd) h += '<path class="fb-c" stroke-opacity="' + OPC[b] + '" d="' + dd + '"></path>'; });
-  D.forEach(function(dd, b){ if (dd) h += '<path class="fb" fill-opacity="' + OPD[b] + '" d="' + dd + '"></path>'; });
-  return h ? '<g class="fibres" aria-hidden="true">' + h + "</g>" : "";
-}
 function layerMarkup(v, d, kindOf, names, titles, cls){
   var B = ATLAS.body2, L = B.views[v] && B.views[v][d]; if (!L) return "";
   cls = cls || {};
@@ -8674,7 +8511,6 @@ function layerMarkup(v, d, kindOf, names, titles, cls){
     }
   });
   h += '</g><g class="cores">' + cores + "</g>";
-  h += fibresMarkup(v, d, L, kindOf);
   if (L.tw && L.tw.length) h += '<path class="tw" fill-rule="evenodd" d="' + ringsD(k0 + "tw", L.tw) + '"></path>';
   /* Morphologie féminine : contour des seins posé sur le grand pectoral (translucide, sans interaction). */
   if (L.deco) h += '<g class="deco" aria-hidden="true">' + (L.deco.fill ? '<path class="deco-fill" d="' + ringsD(k0 + "decof", L.deco.fill) + '"></path>' : "") + (L.deco.line ? '<path class="deco-line" d="' + linesD(k0 + "decol", L.deco.line) + '"></path>' : "") + "</g>";
@@ -8693,12 +8529,7 @@ function bboxOf(id, v, d){
 ATLAS.Map = {
  DEPTHS: DEPTHS,
  /* Vide les caches de géométrie (changement de planches, relance sur place). */
- reset: function(){ DCACHE = {}; RCACHE = {}; CORE_CACHE = {}; BBC = {}; WARP = {}; FIB_CACHE = {}; OPEN_CHOOSER = null; },
- /* Prépare à l'avance les fibres d'une liste de planches (« vue-profondeur »), une par moment libre. */
- prefibres: function(list){
-   var file = list.slice(), lib = window.requestIdleCallback ? function(f){ return window.requestIdleCallback(f, {timeout: 500}); } : function(f){ return setTimeout(f, 60); };
-   (function suite(){ var x = file.shift(); if (!x) return; lib(function(){ var q = x.split("-"), B = ATLAS.body2, L = B && B.views[q[0]] && B.views[q[0]][q[1]]; if (L && FIB_KIND) fibresMarkup(q[0], q[1], L, FIB_KIND); suite(); }); })();
- },
+ reset: function(){ DCACHE = {}; RCACHE = {}; CORE_CACHE = {}; BBC = {}; WARP = {}; OPEN_CHOOSER = null; },
  /* Plan et vue où une structure est la plus lisible. */
  best: function(id, view){
    var B = ATLAS.body2, b = B.best[id];
@@ -8881,37 +8712,45 @@ ATLAS.Map = {
     return bb;
   }
 
-  /* Interactions : un doigt glisse (carte zoomée), deux doigts pincent autour de leur milieu ;
-     quand un doigt se lève, le glisser reprend depuis le doigt restant. */
-  var pointers = {}, drag = null, moved = false, lastType = "mouse";
+  /* Gestes de la carte : machine à états stricte (iPhone d'abord).
+     repos → toucher (un doigt posé, immobile) → glisser (un doigt, au-delà de 8 px ; la carte zoomée se déplace) ; deux
+     doigts : pincer. Les pointeurs actifs sont vidés et l'état remis au repos dès qu'aucun doigt ne touche plus l'écran
+     (touchend ou touchcancel sur le document, liste e.touches vide), au lever ou à l'annulation du dernier pointeur,
+     quand la page perd le focus ou que l'onglet est masqué ; un nouveau premier doigt (isPrimary) repart toujours de
+     zéro : un pointeur dont Safari a perdu la fin ne bloque plus ni le glisser ni le toucher. Un toucher : un seul
+     doigt, aucun pincement pendant le geste, moins de 8 px et moins de 300 ms (souris : moins de 8 px) ; seul un
+     toucher laisse passer le clic qui suit. */
+  var pointers = {}, drag = null, moved = false, lastType = "mouse", G = {mode: "repos", multi: false, x0: 0, y0: 0, t0: 0, tap: false, tTap: 0, tDown: -1e9};
+  function resetGestureState(){ pointers = {}; drag = null; moved = false; G.mode = "repos"; G.multi = false; svg.classList.remove("panning"); }
   function startPan(x, y){ drag = {x: x, y: y, vb: state.vb.slice()}; }
   function startPinch(){
     var ids = Object.keys(pointers), a = pointers[ids[0]], b = pointers[ids[1]];
     var mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
     if (!finite(state.vb)) state.vb = FULL.slice();
     drag = {pinch: Math.max(10, Math.hypot(a[0] - b[0], a[1] - b[1])), w: state.vb[2], c: toSvgXY(mx, my)};
-    moved = true; svg.classList.add("panning");
+    moved = true; G.mode = "pincer"; G.multi = true; G.tap = false; svg.classList.add("panning");
   }
   svg.addEventListener("pointerdown", function(e){
-    pointers[e.pointerId] = [e.clientX, e.clientY]; lastType = e.pointerType;
+    /* Premier doigt d'un nouveau geste : tout ce qui restait de l'ancien est périmé. */
+    if (e.isPrimary) resetGestureState();
+    pointers[e.pointerId] = [e.clientX, e.clientY]; lastType = e.pointerType; G.tDown = performance.now();
     var n = Object.keys(pointers).length;
-    if (n === 1){ moved = false; startPan(e.clientX, e.clientY); }
-    else if (n === 2 && e.pointerType === "touch" && e.isPrimary){ /* pointeur fantôme d'un geste précédent : on repart d'un seul doigt */ pointers = {}; pointers[e.pointerId] = [e.clientX, e.clientY]; moved = false; startPan(e.clientX, e.clientY); return; }
-    else if (n === 2) startPinch();
+    if (n === 1){ G.mode = "toucher"; G.x0 = e.clientX; G.y0 = e.clientY; G.t0 = G.tDown; G.tap = false; startPan(e.clientX, e.clientY); }
+    else startPinch();
   });
   svg.addEventListener("pointermove", function(e){
     var p = pointers[e.pointerId];
     if (p){ p[0] = e.clientX; p[1] = e.clientY; }
     var ids = Object.keys(pointers);
-    if (drag && drag.pinch && ids.length >= 2){
+    if (G.mode === "pincer" && drag && drag.pinch && ids.length >= 2){
       var a = pointers[ids[0]], b = pointers[ids[1]], dist = Math.max(10, Math.hypot(a[0] - b[0], a[1] - b[1]));
       state.vb = vbAround(drag.c, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2, drag.w * drag.pinch / dist); applyVB();
       return;
     }
-    if (drag && !drag.pinch && p && ids.length === 1 && state.vb[2] < W - 1){
+    if (p && ids.length === 1 && drag && !drag.pinch){
       var dxp = e.clientX - drag.x, dyp = e.clientY - drag.y;
-      if (!moved && Math.hypot(dxp, dyp) >= 8){ moved = true; svg.classList.add("panning"); }
-      if (moved){ var s = frame(drag.vb).s; state.vb = clampVB([drag.vb[0] - dxp / s, drag.vb[1] - dyp / s, drag.vb[2], drag.vb[3]]); applyVB(); }
+      if (!moved && Math.hypot(e.clientX - G.x0, e.clientY - G.y0) >= 8){ moved = true; G.mode = "glisser"; svg.classList.add("panning"); }
+      if (moved && state.vb[2] < W - 1){ var s = frame(drag.vb).s; state.vb = clampVB([drag.vb[0] - dxp / s, drag.vb[1] - dyp / s, drag.vb[2], drag.vb[3]]); applyVB(); }
     }
     if (tip && e.pointerType === "mouse"){
       var t = e.target.closest && e.target.closest("[data-id]");
@@ -8925,17 +8764,25 @@ ATLAS.Map = {
     if (!pointers[e.pointerId]) return;
     delete pointers[e.pointerId];
     var ids = Object.keys(pointers);
-    if (ids.length >= 2) startPinch();
-    else if (ids.length === 1){ var q = pointers[ids[0]]; startPan(q[0], q[1]); }
-    else { drag = null; setTimeout(function(){ svg.classList.remove("panning"); }, 0); }
+    if (!ids.length){
+      var d = Math.hypot(e.clientX - G.x0, e.clientY - G.y0), dt = performance.now() - G.t0;
+      G.tap = e.type !== "pointercancel" && !G.multi && !moved && d < 8 && (e.pointerType === "mouse" || dt < 300); G.tTap = performance.now();
+      resetGestureState();
+    }
+    else if (ids.length >= 2) startPinch();
+    /* Un doigt se lève pendant un pincement : on glisse depuis le doigt restant (ce n'est plus un toucher). */
+    else { var q = pointers[ids[0]]; startPan(q[0], q[1]); moved = true; G.mode = "glisser"; }
   }
   svg.addEventListener("pointerup", endPointer); svg.addEventListener("pointercancel", endPointer);
-  function purger(){ pointers = {}; drag = null; setTimeout(function(){ svg.classList.remove("panning"); }, 0); }
-  svg.addEventListener("touchend", function(e){ if (!e.touches || !e.touches.length) purger(); }, {passive: true});
-  svg.addEventListener("touchcancel", purger, {passive: true});
   window.addEventListener("pointerup", function(e){ if (pointers[e.pointerId] && !svg.contains(e.target)) endPointer(e); });
-  window.addEventListener("pointercancel", function(e){ if (pointers[e.pointerId]) endPointer(e); });
-  document.addEventListener("visibilitychange", function(){ if (document.hidden) purger(); });
+  window.addEventListener("pointercancel", function(e){ if (pointers[e.pointerId] && !svg.contains(e.target)) endPointer(e); });
+  /* Vérité du système (Safari iOS) : plus aucun doigt sur l'écran, plus aucun pointeur actif. */
+  ["touchend", "touchcancel"].forEach(function(t){ document.addEventListener(t, function(e){ if (e.touches && e.touches.length) return; if (t === "touchcancel") G.tap = false; if (Object.keys(pointers).length || G.mode !== "repos") resetGestureState(); }, {passive: true, capture: true}); });
+  window.addEventListener("blur", function(){ G.tap = false; resetGestureState(); });
+  document.addEventListener("visibilitychange", function(){ if (document.hidden){ G.tap = false; resetGestureState(); } });
+  /* Le clic qui suit un geste n'est accepté que si ce geste était un toucher ; un clic sans geste récent (clavier,
+     lecteur d'écran) passe toujours. */
+  function tapPermis(){ var now = performance.now(); if (now - G.tDown > 1500) return true; var ok = G.tap && now - G.tTap < 1500; G.tap = false; return ok; }
   svg.addEventListener("pointerleave", function(e){ if (tip) tip.hidden = true; if (e.pointerType === "mouse") endPointer(e); });
   /* Safari (iPhone) : le pincement sur la carte ne doit pas zoomer toute la page. */
   ["gesturestart", "gesturechange", "gestureend"].forEach(function(t){ svg.addEventListener(t, function(e){ if (opt.wheel !== false) e.preventDefault(); }, {passive: false}); });
@@ -8955,7 +8802,7 @@ ATLAS.Map = {
     return out;
   }
   svg.addEventListener("click", function(e){
-    if (moved){ moved = false; return; }
+    if (!tapPermis()) return;
     closeChooser(); if (tip) tip.hidden = true;
     var t = e.target.closest && e.target.closest("[data-id]");
     if (opt.interactive === false){ if (opt.onBackground) opt.onBackground(); return; }
@@ -9951,7 +9798,7 @@ var VS = [
 "precision highp float;",
 "layout(location=0) in vec3 aPos; layout(location=1) in float aId; layout(location=2) in vec4 aNT; layout(location=3) in vec2 aBone; layout(location=4) in vec2 aWT;",
 "uniform mat4 uVP, uV, uB[19]; uniform vec3 uMin; uniform float uExt; uniform sampler2D uState; uniform highp sampler2D uFr;",
-"out vec3 vN, vL, vVP, vT, vB; out vec4 vS; out vec2 vTT; flat out float vId;",
+"out vec3 vN, vL, vVP, vT, vB, vW, vNw; out vec4 vS; out vec2 vTT; flat out float vId;",
 "void main(){",
 "  int id = int(aId + .5); vec4 st = texelFetch(uState, ivec2(id, 0), 0);",
 "  if (st.r < .5){ gl_Position = vec4(2., 2., 2., 1.); return; }",
@@ -9959,7 +9806,7 @@ var VS = [
 "  /* Apparition : la pièce surgit à 80 % de sa taille, autour de son centre, et se pose. */",
 "  if (st.a < .999){ vec3 cc = texelFetch(uFr, ivec2(id, 2), 0).xyz; p = cc + (p - cc) * (.8 + .2 * st.a); }",
 "  mat4 m = uB[int(aBone.x + .5)] * aWT.x + uB[int(aBone.y + .5)] * (1. - aWT.x);",
-"  vec4 wp = m * vec4(p, 1.); vL = p; vN = mat3(uV) * (mat3(m) * aNT.xyz); vVP = (uV * wp).xyz; vT = mat3(uV) * (mat3(m) * texelFetch(uFr, ivec2(id, 0), 0).xyz); vB = mat3(uV) * (mat3(m) * texelFetch(uFr, ivec2(id, 1), 0).xyz);",
+"  vec4 wp = m * vec4(p, 1.); vL = p; vW = wp.xyz; vNw = mat3(m) * aNT.xyz; vN = mat3(uV) * vNw; vVP = (uV * wp).xyz; vT = mat3(uV) * (mat3(m) * texelFetch(uFr, ivec2(id, 0), 0).xyz); vB = mat3(uV) * (mat3(m) * texelFetch(uFr, ivec2(id, 1), 0).xyz);",
 "  vS = st; vTT = vec2(aNT.w, aWT.y); vId = aId; gl_Position = uVP * wp;",
 "}"].join("\n");
 
@@ -9973,14 +9820,26 @@ var VS = [
 var FS = [
 "#version 300 es",
 "precision highp float;",
-"in vec3 vN, vL, vVP, vT, vB; in vec4 vS; in vec2 vTT; flat in float vId;",
+"in vec3 vN, vL, vVP, vT, vB, vW, vNw; in vec4 vS; in vec2 vTT; flat in float vId;",
 "uniform sampler2D uState; uniform vec3 uTendon, uSel, uShade, uCore, uRimC, uSpecC, uPaper; uniform vec4 uFx, uKey, uLux, uTint; uniform highp sampler2D uFr; uniform float uFib, uPick, uPickTd; uniform vec3 uBoxC, uBoxH; uniform float uBoxF;",
-"uniform vec3 uLk, uLf, uLr1, uLr2, uLiC, uSssC, uFillC, uRim1C, uRim2C, uOmbreC, uInkF; uniform vec4 uPaint, uBr;",
+"uniform vec3 uLk, uLf, uLr1, uLr2, uLiC, uSssC, uFillC, uRim1C, uRim2C, uOmbreC, uInkF; uniform vec4 uPaint, uBr; uniform float uPxS;",
+"uniform vec3 uKeyI, uFillI, uSkyI, uGndI, uRimI, uShLift; uniform vec4 uLum; uniform highp sampler2DShadow uSh; uniform mat4 uLVP; uniform vec4 uShP;",
 "layout(location=0) out vec4 oCol; layout(location=1) out vec4 oAux;",
 "float bande(float x, float e){ float w = max(fwidth(x) * 1.2, .012); return smoothstep(e - w, e + w, x); }",
-"/* Profil d'un faisceau musculaire, en pente (de -1 à 1) : une crête arrondie, un sillon net entre deux faisceaux,",
-"   adouci sur la largeur w (au moins un pixel et demi : aucun crénelage). */",
-"float sillon(float g, float w){ float c = fract(g) - .5; return -2. * c * smoothstep(0., w, .5 - abs(c)); }",
+"vec3 lin3(vec3 c){ return c * (c * (c * .305306 + .682171) + .012522); }",
+"/* Courbe filmique (ACES, ajustement de Narkowicz) : hautes lumières qui s'arrondissent, noirs profonds, rouges riches. */",
+"vec3 filmique(vec3 x){ return clamp((x * (2.51 * x + .03)) / (x * (2.43 * x + .59) + .14), 0., 1.); }",
+"/* Ombre portée de la clé : carte d'ombre vue de la lumière, filtrée (3 × 3 échantillons comparés, bilinéaires) ; aucun",
+"   bruit, bord doux et régulier. uShP : x = décalage le long de la normale (m), y = biais de profondeur, z = taille d'un",
+"   texel (0 à 1), w = 1 si la carte est valide. */",
+"float ombrePortee(vec3 w, vec3 nw, float ndl){",
+"  if (uShP.w < .5) return 1.;",
+"  vec4 l = uLVP * vec4(w + nw * uShP.x * (1.5 - ndl), 1.); vec3 c = l.xyz / l.w * .5 + .5;",
+"  if (c.x <= 0. || c.x >= 1. || c.y <= 0. || c.y >= 1. || c.z >= 1.) return 1.;",
+"  float z = c.z - uShP.y, s = 0.;",
+"  for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) s += texture(uSh, vec3(c.xy + vec2(float(i), float(j)) * uShP.z * 1.35, z));",
+"  return s / 9.;",
+"}",
 "void main(){",
 "  float fade = 1.;",
 "  if (uBoxF > 0.){ vec3 bd = (abs(vL - uBoxC) - uBoxH) / uBoxF; fade = 1. - smoothstep(0., 1., max(bd.x, max(bd.y, bd.z))); }",
@@ -9999,36 +9858,48 @@ var FS = [
 "  float tCoeur = 0.;",
 "  vec3 col;",
 "  if (uPaint.x > 0.){",
-"    /* Sculpture anatomique : une clé directionnelle liée à la caméra et une rampe franche entre la lumière (la couleur de",
-"       la matière) et une ombre froide bleu-ardoise ; ni bruit, ni lueur diffuse sur la limite d'ombre. */",
-"    vec3 V = normalize(-vVP); float nv0 = dot(N, V), ndl0 = dot(N, uLk);",
-"    /* Fibres en relief : un motif de faisceaux le long de l'axe du muscle perturbe la normale (la crête accroche la",
-"       lumière, le sillon fait une micro-ombre). L'écart des faisceaux reste entre 4,5 et 9 pixels à l'écran (octaves",
-"       fondues) ; sillons larges et marqués au ventre du muscle, effilés puis absents vers les tendons ; ils s'effacent",
-"       dans les hautes lumières. */",
-"    if (fibre && uFib > 0.){",
-"      float ventre = smoothstep(.04, .5, 1. - abs(2. * vTT.x - 1.)) * (1. - smoothstep(.05, .5, vTT.y));",
-"      float g0 = dot(dd, f1.xyz) / max(f0.w, 1e-4), fw0 = max(fwidth(g0), 1e-5);",
-"      float Lo = max(0., log2(fw0 * 9.)), Li = floor(Lo), tt = Lo - Li, k1 = exp2(-Li), wb = mix(.04, .16, ventre);",
-"      float pente = mix(sillon(g0 * k1, max(wb, fw0 * k1 * 1.6)), sillon(g0 * k1 * .5, max(wb, fw0 * k1 * .8)), tt);",
-"      float estompe = 1. - .9 * smoothstep(.7, .95, ndl0);",
-"      vec3 Bv = vB - N * dot(N, vB); float bl = length(Bv);",
-"      if (bl > 1e-4) N = normalize(N + Bv / bl * pente * .62 * uFib * ventre * estompe);",
-"    }",
-"    /* Rampe franche (la limite d'ombre suit la forme, les fibres n'y font qu'à moitié des zébrures) ; dans la lumière,",
-"       la valeur suit l'orientation : les faisceaux en relief s'y lisent. */",
-"    float ndl = dot(N, uLk), tl = smoothstep(-.03, .09, mix(ndl0, ndl, .45));",
-"    vec3 lit = base * (.42 + .7 * clamp(ndl, 0., 1.)) * uLiC * mix(vec3(1.), uTint.rgb * 2.1, uTint.a);",
-"    col = mix(uOmbreC * (1. + .3 * (1. - mus) + .3 * td), lit, tl);",
-"    /* Spéculaire anisotrope étroit, en travers des fibres, sur le muscle seul : satiné et tendu. Tendons et os mats. */",
-"    if (mus > .5 && dot(vT, vT) > 1e-6){",
-"      vec3 H = normalize(uLk + V), Tf = normalize(vT); float th = dot(Tf, H);",
-"      col += uLiC * vec3(1., .9, .86) * pow(sqrt(max(0., 1. - th * th)), 90.) * .085 * tl * (1. - td) * uFx.w;",
+"    /* Rendu cinématique, en lumière linéaire puis courbe filmique : une clé franche liée à la caméra (avec son ombre",
+"       portée douce), un débouchage froid léger, une ambiance ciel / sol qui garde la forme lisible dans l'ombre, un",
+"       seul contre-jour net. Muscle satiné (reflet anisotrope étiré en travers des fibres), tendons et os ivoire mats.",
+"       Ni bruit, ni lueur sur la limite d'ombre. */",
+"    vec3 V = normalize(-vVP), N0 = N; float nv0 = max(dot(N0, V), 0.);",
+"    vec3 alb = lin3(clamp(base, 0., 1.));",
+"    /* Fibres stylisées : une ondulation lisse (sinus) le long de chaque muscle incline à peine la normale ; faisceaux",
+"       larges (au moins 7 mm, 12 à 24 points à l'écran, octaves fondues), pleins au ventre, nuls aux tendons, effacés",
+"       en plan large et sur les bords rasants. Elles se lisent surtout dans le reflet satiné. */",
+"    float ventre = smoothstep(.04, .5, 1. - abs(2. * vTT.x - 1.)) * (1. - smoothstep(.05, .5, vTT.y));",
+"    float g0 = dot(dd, f1.xyz) / max(f0.w, 1e-4), fw0 = max(fwidth(g0), 1e-6) * uPxS;",
+"    float Lo = max(0., log2(fw0 * 24.)), Li = floor(Lo), tt = Lo - Li, k1 = exp2(-Li);",
+"    float ph = 6.2831853 * g0 * k1, pte = mix(cos(ph), cos(ph * .5), tt), crete = mix(sin(ph), sin(ph * .5), tt);",
+"    float relief = (fibre ? 1. : 0.) * uFib * ventre * (1. - smoothstep(1.4, 2.4, Lo)) * smoothstep(.05, .35, nv0);",
+"    vec3 Bv = vB - N0 * dot(N0, vB); float bl = length(Bv);",
+"    vec3 Nf = bl > 1e-4 ? normalize(N0 - Bv / bl * pte * .13 * relief) : N0;",
+"    float ndl0 = dot(N0, uLk), ndl = dot(Nf, uLk);",
+"    float sh = ombrePortee(vW, normalize(vNw), clamp(ndl0, 0., 1.));",
+"    float kd = clamp(ndl, 0., 1.) * sh;",
+"    vec3 keyC = uKeyI * mix(vec3(1.), uTint.rgb * 1.7, uTint.a);",
+"    vec3 lum = keyC * kd + uFillI * clamp(dot(Nf, uLf), 0., 1.) + mix(uGndI, uSkyI, Nf.y * .5 + .5) * (1. + .3 * (1. - mus));",
+"    vec3 c = alb * lum;",
+"    /* Reflet satiné (GGX anisotrope) : serré le long des fibres, étiré en travers ; les crêtes des faisceaux l'accrochent. */",
+"    if (dot(vT, vT) > 1e-6 && uFx.w > 0.){",
+"      vec3 H = normalize(uLk + V), Tt = vT - Nf * dot(Nf, vT); float tlen = length(Tt);",
+"      if (tlen > 1e-4){",
+"        Tt /= tlen; vec3 Bt = cross(Nf, Tt);",
+"        float at = mix(.5, uLum.y, mus * (1. - td)), ab = mix(.5, uLum.z, mus * (1. - td));",
+"        float th = dot(Tt, H) / at, bh = dot(Bt, H) / ab, nh = max(dot(Nf, H), 0.), dd2 = th * th + bh * bh + nh * nh;",
+"        float D = 1. / (3.14159 * at * ab * dd2 * dd2), F = .035 + .965 * pow(1. - max(dot(V, H), 0.), 5.);",
+"        float sp = D * F * kd / max(4. * max(dot(Nf, V), .2), .2) * mix(.25, 1., mus * (1. - td)) * (1. + .28 * crete * relief);",
+"        c += keyC * sp * uLum.w;",
+"      }",
 "    }",
 "    /* Un seul contre-jour, fin et net, qui détache la silhouette du fond. */",
-"    col += uRim1C * smoothstep(.74, .86, 1. - max(nv0, 0.)) * smoothstep(0., .25, dot(N, uLr1)) * uPaint.w;",
-"    /* Liseré de silhouette ultra-fin (là où la surface devient rasante). */",
-"    float fn = max(fwidth(nv0), 1e-4); col = mix(col, uInkF, (1. - smoothstep(fn * .6, fn * 1.8, nv0)) * .85);",
+"    float fr = pow(1. - nv0, 3.);",
+"    c += uRimI * smoothstep(.32, .62, fr) * smoothstep(.05, .35, dot(N0, uLr1)) * uPaint.w;",
+"    /* Ombre : un voile froid à peine perceptible dans les parties que la clé n'atteint pas. */",
+"    c += uShLift * (1. - kd) * (1. - mus * .4);",
+"    col = pow(filmique(c * uLum.x), vec3(1. / 2.2));",
+"    /* Liseré de silhouette ultra-fin (surface rasante), aucun trait à l'intérieur des muscles. */",
+"    float fn = max(fwidth(nv0), 1e-4); col = mix(col, uInkF, (1. - smoothstep(fn * .6, fn * 1.8, nv0)) * .7);",
 "  } else {",
 "  /* Studio : clé douce en haut à gauche et un peu devant, contre-jour à droite derrière. */",
 "  vec3 Lk = normalize(uKey.xyz), Lr = normalize(vec3(.75, .25, -.6));",
@@ -10062,6 +9933,21 @@ var FS = [
 "  col = mix(col, uSel, hl * .55);",
 "  oCol = vec4(col, fade); oAux = vec4(N.xy * .5 + .5, hl, aux);",
 "}"].join("\n");
+/* Carte d'ombre : profondeur des pièces vues depuis la clé (mêmes poses, même apparition). */
+var VSS = [
+"#version 300 es",
+"precision highp float;",
+"layout(location=0) in vec3 aPos; layout(location=1) in float aId; layout(location=3) in vec2 aBone; layout(location=4) in vec2 aWT;",
+"uniform mat4 uLVP, uB[19]; uniform vec3 uMin; uniform float uExt; uniform sampler2D uState; uniform highp sampler2D uFr;",
+"void main(){",
+"  int id = int(aId + .5); vec4 st = texelFetch(uState, ivec2(id, 0), 0);",
+"  if (st.r < .5){ gl_Position = vec4(2., 2., 2., 1.); return; }",
+"  vec3 p = aPos * uExt + uMin;",
+"  if (st.a < .999){ vec3 cc = texelFetch(uFr, ivec2(id, 2), 0).xyz; p = cc + (p - cc) * (.8 + .2 * st.a); }",
+"  mat4 m = uB[int(aBone.x + .5)] * aWT.x + uB[int(aBone.y + .5)] * (1. - aWT.x);",
+"  gl_Position = uLVP * (m * vec4(p, 1.));",
+"}"].join("\n");
+var FSS = "#version 300 es\nprecision mediump float;\nvoid main(){}";
 var VQ = "#version 300 es\nlayout(location=0) in vec2 aP; out vec2 vU; void main(){ vU = aP * .5 + .5; gl_Position = vec4(aP, 0., 1.); }";
 /* Composition : fond de studio, ombres de contact, contours d'encre ; ou traits seuls (mode épuré). Fondu enchaîné avec
    l'image précédente (uXf < 1) quand l'état change. */
@@ -10164,29 +10050,37 @@ var STYLES = {
      translucidité rouge, contre-jours bleu acier et ambre. */
   /* Planche : sculpture anatomique. Muscle éclairé #a32920, ombre bleu-ardoise #1b2230, tendons et os ivoire mat #e8e0ce ;
      fibres en relief ; une clé à 45° liée à la caméra et un contre-jour fin. */
-  planche: {muscle: "#a32920", tendon: "#e8e0ce", os: "#e8e0ce", cart: "#b9c0c2", conj: "#e3dac6", peau: "#c9b8a6",
+  planche: {muscle: "#a32920", tendon: "#e8e0ce", os: "#d8c29a", cart: "#b9c0c2", conj: "#e3dac6", peau: "#c9b8a6",
     shade: [.12, .05, .055], ombre: "#1b2230", core: "#dc9a80", rim: "#ffcfb8", spec: "#fff1e6", sel: "#ffffff", ink: "#07090d", fx: 1, coreK: 0,
-    bg0: "#16171b", bg1: "#000000", ao: .42, aoT: [.55, .58, .68], pool: .45, fib: 1, lux: [1, 1, 1, 1], grade: [0, 0],
-    paint: [1, 0, 0, .6], liC: [1, 1, 1], rim1: "#d6e0ee", peint: 1},
+    bg0: "#16171b", bg1: "#000000", ao: .62, aoT: [.42, .36, .37], pool: .62, fib: 1, lux: [1, 1, 1, 1], grade: [0, 0],
+    paint: [1, 0, 0, 1], liC: [1, 1, 1], rim1: "#d6e0ee", peint: 1,
+    /* Lumière (linéaire) : x exposition, k clé, f débouchage, ciel / sol, r contre-jour, v voile froid de l'ombre ;
+       at / ab : rugosité du reflet le long / en travers des fibres ; s : force du reflet. */
+    lum: {x: .92, k: [1.12, 1.03, .94], f: [.07, .09, .13], ciel: [.085, .095, .12], sol: [.04, .03, .03], r: [.3, .36, .46], v: [.0025, .0045, .01], at: .24, ab: .52, s: 3}},
   mono: {muscle: "#7d7a77", tendon: "#e9e6df", os: "#d9d4ca", cart: "#a4a7a8", conj: "#e3e0d8", peau: "#9a9794",
     shade: [.4, .4, .42], core: "#f2f2f2", rim: "#f2f2f2", spec: "#ffffff", sel: "#ff453a", ink: "#050505", fx: 1,
     bg0: "#141416", bg1: "#000000", ao: .62, fib: 1, lux: [1, 0, 1, .7], grade: [.8, 1]},
   /* Nuit : monochrome sombre sur noir total, pour l'ouverture de l'accueil. */
-  nuit: {muscle: "#57524d", tendon: "#a39d94", os: "#aaa49a", cart: "#636668", conj: "#918b83", peau: "#555555",
+  nuit: {muscle: "#57524d", tendon: "#a39d94", os: "#b4a589", cart: "#636668", conj: "#918b83", peau: "#555555",
     shade: [.12, .11, .14], core: "#e2d9cc", rim: "#f7f4ee", spec: "#ffffff", sel: "#ff453a", ink: "#000000", fx: 1,
     bg0: "#000000", bg1: "#000000", ao: .9, aoT: [.2, .18, .24], key: [-.6, .82, .3], rimK: .92, coreK: .46, pool: .14, fib: .9, lux: [.7, 0, 1.25, .8], grade: [.7, .4],
-    paint: [1, 0, 0, .8], liC: [1.08, 1, .9], ombre: "#101218", rim1: "#d6e0ee", peint: 1},
-  abysse: {muscle: "#3a3633", tendon: "#6f6961", os: "#77716a", cart: "#4b4e50", conj: "#66605a", peau: "#444444",
+    paint: [1, 0, 0, .8], liC: [1.08, 1, .9], ombre: "#101218", rim1: "#d6e0ee", peint: 1,
+    lum: {x: 1, k: [2.7, 2.5, 2.25], f: [.03, .035, .05], ciel: [.035, .038, .05], sol: [.014, .011, .011], r: [.55, .6, .7], v: [.002, .003, .006], at: .3, ab: .55, s: 2.4}},
+  abysse: {muscle: "#3a3633", tendon: "#6f6961", os: "#7f715b", cart: "#4b4e50", conj: "#66605a", peau: "#444444",
     shade: [.08, .075, .1], core: "#c4b9ab", rim: "#f6f2ea", spec: "#ffffff", sel: "#ff453a", ink: "#000000", fx: 1,
     bg0: "#000000", bg1: "#000000", ao: .95, aoT: [.12, .1, .14], key: [-.55, .85, .25], rimK: 1, coreK: .36, pool: .1, fib: .95, lux: [.6, 0, 1.45, .5], grade: [.7, .2],
-    paint: [1, 0, 0, .9], liC: [1.06, 1, .92], ombre: "#090b10", rim1: "#d6e0ee", peint: 1},
+    paint: [1, 0, 0, .9], liC: [1.06, 1, .92], ombre: "#090b10", rim1: "#d6e0ee", peint: 1,
+    lum: {x: 1, k: [4.2, 3.9, 3.5], f: [.025, .03, .045], ciel: [.03, .033, .045], sol: [.012, .01, .01], r: [.7, .76, .9], v: [.0015, .0025, .005], at: .28, ab: .5, s: 2.8}},
   neutre2d: {muscle: "#808080", tendon: "#808080", os: "#808080", cart: "#808080", conj: "#808080", peau: "#808080",
     shade: [.2, .1, .09], core: "#e2765c", rim: "#ffcfb8", spec: "#fff1e6", sel: "#808080", ink: "#808080", fx: 1, coreK: .22,
     bg0: "#808080", bg1: "#808080", ao: .72, aoT: [.46, .34, .32], pool: 1, fib: 0, lux: [1, 1, 1, 1], grade: [0, 0],
     paint: [1, 1, .6, .8], brush: [6, 30, .32, .22], liC: [1.02, .99, .95], sss: "#c2381a", fill: [.05, .06, .08], rim1: "#b9c3d4", rim2: "#ffc09a", peint: 0},
-  papier: {muscle: "#c8463a", tendon: "#f3ecdc", os: "#ece3cf", cart: "#c6cfd1", conj: "#f0e8d6", peau: "#d9c9b8",
-    shade: [.64, .52, .55], core: "#f07a68", rim: "#ffffff", spec: "#ffffff", sel: "#1d1d1f", ink: "#1d1514", fx: 1,
-    bg0: "#ffffff", bg1: "#ffffff", ao: .35, clair: 1, fib: .8},
+  /* Papier (cartes à imprimer) : le même rendu, en planche claire d'illustration : lumière enveloppante, ombres portées
+     légères, contours d'encre fins entre les structures, fond blanc, rien de trop sombre (encre, lisibilité des noms). */
+  papier: {muscle: "#c63a2e", tendon: "#f1e9d8", os: "#e6d4b0", cart: "#c6cfd1", conj: "#f0e8d6", peau: "#d9c9b8",
+    shade: [.64, .52, .55], core: "#f07a68", rim: "#ffffff", spec: "#ffffff", sel: "#1d1d1f", ink: "#2a1c1b", fx: 1,
+    bg0: "#ffffff", bg1: "#ffffff", ao: .4, aoT: [.62, .55, .55], pool: 1, clair: 1, fib: .8, paint: [1, 0, 0, 0], peint: 0, ombre: "#3a2a2a",
+    lum: {x: 1.15, k: [1.05, 1.02, .97], f: [.2, .2, .22], ciel: [.34, .34, .36], sol: [.2, .18, .18], r: [0, 0, 0], v: [0, 0, 0], at: .3, ab: .55, s: 1.2}},
   epure: {muscle: "#000000", tendon: "#000000", os: "#000000", cart: "#000000", conj: "#000000", peau: "#000000",
     shade: [1, 1, 1], core: "#000000", rim: "#000000", spec: "#000000", sel: "#ff453a", ink: "#ecebe7", fx: 0,
     bg0: "#101012", bg1: "#050505", ao: 0, clean: 1}
@@ -10199,7 +10093,17 @@ function creer(canvas, data, opt){
   var M = data.meta, ELS = M.els, NE = ELS.length, NS = M.seg.length;
   /* Pièces écartées pour de bon (les cartilages du nez) : jamais affichées, jamais cadrées. */
   ELS.forEach(function(e){ e.ex = opt.exclure && opt.exclure(e) ? 1 : 0; });
-  var P1 = prog(gl, VS, FS), P2 = prog(gl, VQ, FQ), P3 = prog(gl, VQ, FX);
+  var P1 = prog(gl, VS, FS), P2 = prog(gl, VQ, FQ), P3 = prog(gl, VQ, FX), P4 = prog(gl, VSS, FSS);
+  /* Carte d'ombre de la clé (4096² sur ordinateur, 2048² sur téléphone), comparaison matérielle filtrée. */
+  var SMW = Math.min(gl.getParameter(gl.MAX_TEXTURE_SIZE) || 2048, Math.min(screen.width || 1e4, screen.height || 1e4) < 600 ? 2048 : 4096);
+  var shTex = gl.createTexture(), shFbo = gl.createFramebuffer(), mLVP = new Float32Array(16), mLV = new Float32Array(16), mLP = new Float32Array(16), shOK = false;
+  gl.bindTexture(gl.TEXTURE_2D, shTex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT24, SMW, SMW, 0, gl.DEPTH_COMPONENT, gl.UNSIGNED_INT, null);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_MODE, gl.COMPARE_REF_TO_TEXTURE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_FUNC, gl.LEQUAL);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, shFbo); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, shTex, 0); gl.drawBuffers([gl.NONE]); gl.readBuffer(gl.NONE);
+  var shPret = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
   /* Tampons. */
   var vao = gl.createVertexArray(); gl.bindVertexArray(vao);
@@ -10220,7 +10124,7 @@ function creer(canvas, data, opt){
      affiché et l'état précédent, pour les fondus enchaînés. */
   var TW = 1024, stCur = new Uint8Array(TW * 2 * 4), stPrev = new Uint8Array(TW * 2 * 4), stTex = gl.createTexture();
   /* Repère de chaque muscle, au repos : axe des fibres (déjà calculé par la préparation du modèle), direction en travers
-     des fibres (deuxième axe principal), centre. Les fibres sont des traits parallèles à l'axe, tous les 3,4 mm. */
+     des fibres (deuxième axe principal), centre. Les faisceaux sont parallèles à l'axe, tous les 7 mm (au plus serré). */
   var frTex = gl.createTexture(), FR = new Float32Array(TW * 3 * 4);
   (function(){
     var dv = new DataView(data.vb.buffer, data.vb.byteOffset, data.vb.byteLength), mn = M.min, ext = M.ext;
@@ -10239,7 +10143,7 @@ function creer(canvas, data, opt){
         var d = w[0] * a[0] + w[1] * a[1] + w[2] * a[2]; w = [w[0] - d * a[0], w[1] - d * a[1], w[2] - d * a[2]];
         var l = Math.hypot(w[0], w[1], w[2]); if (l < 1e-12) break; u = [w[0] / l, w[1] / l, w[2] / l];
       }
-      var q = k * 4; FR[q] = a[0]; FR[q + 1] = a[1]; FR[q + 2] = a[2]; FR[q + 3] = .0034;
+      var q = k * 4; FR[q] = a[0]; FR[q + 1] = a[1]; FR[q + 2] = a[2]; FR[q + 3] = .007;
       q = (TW + k) * 4; FR[q] = u[0]; FR[q + 1] = u[1]; FR[q + 2] = u[2];
       q = (2 * TW + k) * 4; FR[q] = c[0]; FR[q + 1] = c[1]; FR[q + 2] = c[2]; FR[q + 3] = 1;
     });
@@ -10328,8 +10232,13 @@ function creer(canvas, data, opt){
   var BM = new Float32Array(NS * 16), bm = []; for (i = 0; i < NS; i++) bm.push(BM.subarray(i * 16, i * 16 + 16));
   var mV = new Float32Array(16), mP = new Float32Array(16), mVP = new Float32Array(16), mT = new Float32Array(16);
   var REGI = {}; M.reg.forEach(function(r, k){ REGI[r] = k; });
-  /* Accompagnement en bout de chaîne : avant-bras et jambes un peu en retard, mains et pieds davantage. */
-  var RETARD = M.seg.map(function(n){ return /^(main|pied)/.test(n) ? .16 : /^(avantbras|jambe)/.test(n) ? .07 : 0; });
+  /* Accompagnement en bout de chaîne (retard cinématique) : avant-bras et jambes partent un peu après le reste, poignets
+     et mains, pieds davantage ; chacun garde toute la durée du geste, donc arrive aussi après (le poignet suit l'avant-
+     bras, puis se pose) : aucun segment n'est accéléré pour rattraper. */
+  var RETARD = M.seg.map(function(n){ return /^(main|pied)/.test(n) ? .2 : /^(avantbras|jambe)/.test(n) ? .08 : 0; });
+  var POSE_FIN = 1 + Math.max.apply(null, RETARD.concat([0]));
+  /* Pour chaque main, l'avant-bras qui la porte (sa traînée dépend de l'ampleur du geste). */
+  var MAINS = M.seg.map(function(n){ var m = /^main([LR])$/.exec(n); return m ? M.seg.indexOf("avantbras" + m[1]) : -1; });
   var FOV = 22 * Math.PI / 180;
   var segEl = new Uint8Array(NE); (function(){ var u = data.vb; ELS.forEach(function(e, k){ var c = new Uint16Array(NS), a = e.v[0], b = a + e.v[1], st = Math.max(1, Math.floor(e.v[1] / 60)); for (var v = a; v < b; v += st) c[u[v * 16 + 12]]++; var best = 0; for (var s = 1; s < NS; s++) if (c[s] > c[best]) best = s; segEl[k] = best; }); })();
 
@@ -10394,7 +10303,7 @@ function creer(canvas, data, opt){
   function poser(pose, duree){
     for (var s = 0; s < NS; s++){ S.q0[s] = S.q[s].slice(); S.q1[s] = (pose && pose.q && pose.q[M.seg[s]]) || [0, 0, 0, 1]; }
     S.tr0 = S.tr.slice(); S.tr1 = (pose && pose.t) || [0, 0, 0];
-    S.poseT = 0; S.poseD = duree == null ? 1.4 : duree; if (!S.poseD){ S.poseT = 1; for (s = 0; s < NS; s++) S.q[s] = S.q1[s].slice(); S.tr = S.tr1.slice(); matrices(); }
+    S.poseT = 0; S.poseD = duree == null ? 1.4 : duree; if (!S.poseD){ S.poseT = POSE_FIN; for (s = 0; s < NS; s++) S.q[s] = S.q1[s].slice(); S.tr = S.tr1.slice(); matrices(); }
     boucle();
   }
 
@@ -10472,23 +10381,57 @@ function creer(canvas, data, opt){
     var pa = st.paint || [0, 0, 0, 0], rf = R && R.i != null ? R.i : 1; gl.uniform4f(u.uPaint, pa[0], pick ? 0 : pa[1], pa[2], pa[3] * rf);
     gl.uniform3fv(u.uLiC, st.liC || [1, 1, 1]); gl.uniform3fv(u.uSssC, hex(st.sss || "#000000").map(function(x){ return x * .5; })); gl.uniform3fv(u.uFillC, st.fill || [0, 0, 0]);
     gl.uniform3fv(u.uRim1C, hex(st.rim1 || "#000000").map(function(x){ return x * .55; })); gl.uniform3fv(u.uRim2C, hex(st.rim2 || "#000000").map(function(x){ return x * .4; }));
-    gl.uniform3fv(u.uOmbreC, hex(st.ombre || "#1b2230")); gl.uniform3fv(u.uInkF, hex(st.ink || "#000000"));
+    gl.uniform3fv(u.uOmbreC, hex(st.ombre || "#1b2230")); gl.uniform3fv(u.uInkF, hex(st.ink || "#000000")); gl.uniform1f(u.uPxS, S.pxs || 1);
     gl.activeTexture(gl.TEXTURE5); gl.bindTexture(gl.TEXTURE_2D, frTex); gl.uniform1i(u.uFr, 5); gl.uniform1f(u.uFib, pick ? 0 : (st.fib || 0)); gl.activeTexture(gl.TEXTURE0);
     gl.uniform3fv(u.uBoxC, S.box.c); gl.uniform3fv(u.uBoxH, S.box.h); gl.uniform1f(u.uBoxF, S.box.f);
+    gl.activeTexture(gl.TEXTURE6); gl.bindTexture(gl.TEXTURE_2D, shTex); gl.uniform1i(u.uSh, 6); gl.activeTexture(gl.TEXTURE0);
+    gl.uniformMatrix4fv(u.uLVP, false, mLVP); gl.uniform4f(u.uShP, S.shOff || 0, .0006, 1 / SMW, !pick && shOK ? 1 : 0);
+    var L = st.lum || {}, ex = L.x != null ? L.x : 1;
+    gl.uniform3fv(u.uKeyI, L.k || [1.05, 1, .94]); gl.uniform3fv(u.uFillI, L.f || [.07, .085, .12]); gl.uniform3fv(u.uSkyI, L.ciel || [.085, .095, .12]); gl.uniform3fv(u.uGndI, L.sol || [.035, .028, .028]);
+    gl.uniform3fv(u.uRimI, L.r || [.55, .62, .75]); gl.uniform3fv(u.uShLift, L.v || [.0025, .004, .009]); gl.uniform4f(u.uLum, ex, L.at || .2, L.ab || .45, L.s != null ? L.s : .55);
     gl.enable(gl.DEPTH_TEST); gl.disable(gl.BLEND); gl.disable(gl.CULL_FACE);
+    dessiner(pres);
+    gl.bindVertexArray(null);
+  }
+  function dessiner(pres){
     var a = -1, b = -1;
     for (var k = 0; k <= NE; k++){
       var on = k < NE && pres[k];
       if (on){ if (a < 0) a = ELS[k].i[0]; b = ELS[k].i[0] + ELS[k].i[1]; }
       else if (a >= 0){ gl.drawElements(gl.TRIANGLES, b - a, gl.UNSIGNED_INT, a * 4); a = -1; }
     }
-    gl.bindVertexArray(null);
+  }
+  /* Carte d'ombre : la clé (direction de la vue ramenée dans le monde) regarde la zone cadrée en projection
+     orthographique, juste assez large pour la couvrir (résolution maximale en gros plan). */
+  function passeOmbre(style, pres){
+    var st = STYLES[style] || STYLES.planche; shOK = false;
+    if (!shPret || !st.paint || st.clean) return;
+    var R = S.rig, kk = R ? R.k : (st.key ? [st.key[0], st.key[1], st.key[2]] : RIG0.k), kv = dirVue(kk, R);
+    var kw = nrm([mV[0] * kv[0] + mV[1] * kv[1] + mV[2] * kv[2], mV[4] * kv[0] + mV[5] * kv[1] + mV[6] * kv[2], mV[8] * kv[0] + mV[9] * kv[1] + mV[10] * kv[2]]);
+    var c, r;
+    if (S.ortho){ var oc = S.ortho.c; c = [(oc[0] + oc[1]) / 2, (oc[2] + oc[3]) / 2, 0]; r = Math.max(oc[1] - oc[0], oc[3] - oc[2]) * .62; }
+    else { c = [S.cam.tx, S.cam.ty, S.cam.tz]; r = Math.max(.22, Math.min(1.3, (S.cam.dist + (S.dArc || 0)) * Math.tan(FOV / 2) * Math.max(1, dimW() / dimH()) * 1.3)); }
+    var D = 3, eye = [c[0] + kw[0] * D, c[1] + kw[1] * D, c[2] + kw[2] * D];
+    if (Math.abs(kw[1]) > .98) eye[2] += .01;
+    lookAt(mLV, eye, c);
+    var n = D - 1.7, f = D + 1.7; mLP.fill(0); mLP[0] = 1 / r; mLP[5] = 1 / r; mLP[10] = -2 / (f - n); mLP[14] = -(f + n) / (f - n); mLP[15] = 1;
+    mul(mLVP, mLP, mLV); S.shOff = 2 * r / SMW * 1.6;
+    var u = P4.u; gl.useProgram(P4.p); gl.bindVertexArray(vao);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, shFbo); gl.viewport(0, 0, SMW, SMW); gl.clearBufferfv(gl.DEPTH, 0, [1]);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, stTex); gl.uniform1i(u.uState, 0);
+    gl.activeTexture(gl.TEXTURE5); gl.bindTexture(gl.TEXTURE_2D, frTex); gl.uniform1i(u.uFr, 5); gl.activeTexture(gl.TEXTURE0);
+    gl.uniformMatrix4fv(u.uLVP, false, mLVP); gl.uniformMatrix4fv(u.uB, false, BM); gl.uniform3fv(u.uMin, M.min); gl.uniform1f(u.uExt, M.ext);
+    gl.enable(gl.DEPTH_TEST); gl.disable(gl.BLEND); gl.disable(gl.CULL_FACE); gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(1.6, 4);
+    dessiner(pres);
+    gl.disable(gl.POLYGON_OFFSET_FILL); gl.bindVertexArray(null);
+    shOK = true;
   }
   /* Une image complète d'un état (présence, couleurs, style) composée dans fboOut. */
   function image1(pw, ph, sc, style, pres, buf, fboOut, xf){
     var st = STYLES[style] || STYLES.planche;
     etat(buf, pres);
     var ms = SAMPLES > 1;
+    if (!S.vide) passeOmbre(style, pres);
     gl.bindFramebuffer(gl.FRAMEBUFFER, ms ? msFbo : fbo); gl.viewport(0, 0, pw, ph);
     gl.clearBufferfv(gl.COLOR, 0, [0, 0, 0, 0]); gl.clearBufferfv(gl.COLOR, 1, [0, 0, 0, 0]); gl.clearBufferfv(gl.DEPTH, 0, [1]);
     if (!S.vide) scene(false, style, pres);
@@ -10521,6 +10464,7 @@ function creer(canvas, data, opt){
     while (w * h * sc * sc > 16.6e6) sc *= .95;
     var pw = Math.max(2, Math.round(w * sc)), ph = Math.max(2, Math.round(h * sc));
     if (S.capW){ pw = S.capW; ph = S.capH; sc = Math.max(1, pw / 900); }
+    S.pxs = sc;
     if (canvas.width !== pw || canvas.height !== ph){ canvas.width = pw; canvas.height = ph; }
     cible(pw, ph); camMat(pw, ph);
     couleursDans(stCur, S.style);
@@ -10569,9 +10513,16 @@ function creer(canvas, data, opt){
       R.y = R0.y + dyr * re; R.p = (R0.p || 0) + ((R1.p || 0) - (R0.p || 0)) * re; R.i = (R0.i != null ? R0.i : 1) + ((R1.i != null ? R1.i : 1) - (R0.i != null ? R0.i : 1)) * re;
       R.suit = R1.suit; S.rig = R; if (ra.t >= 1){ S.rig = R1; S.rigA = null; } actif = true;
     }
-    if (S.poseT < 1){
-      S.poseT = Math.min(1, S.poseT + dt / S.poseD); var pe = easeIO(S.poseT);
-      for (var s = 0; s < NS; s++){ var lg = RETARD[s], ps = lg ? easeIO(Math.max(0, (S.poseT - lg) / (1 - lg))) : pe; S.q[s] = qSlerp(S.q0[s], S.q1[s], ps); }
+    if (S.poseT < POSE_FIN){
+      S.poseT = Math.min(POSE_FIN, S.poseT + dt / S.poseD); var pe = easeIO(S.poseT);
+      for (var s = 0; s < NS; s++){
+        var lg = RETARD[s], ps = lg ? easeIO(S.poseT - lg) : pe; S.q[s] = qSlerp(S.q0[s], S.q1[s], ps);
+        if (MAINS[s] >= 0){
+          var qa = S.q0[MAINS[s]], qb = S.q1[MAINS[s]], dq = Math.abs(qa[0] * qb[0] + qa[1] * qb[1] + qa[2] * qb[2] + qa[3] * qb[3]), ang = 2 * Math.acos(Math.min(1, dq)) * 180 / Math.PI;
+          var tr = Math.sin(Math.PI * Math.max(0, Math.min(1, (S.poseT - .08) / (POSE_FIN - .08)))), amp = Math.min(22, 4 + ang * .45);
+          if (amp > 4.5) S.q[s] = qMul(S.q[s], qAxe(1, 0, 0, amp * tr));
+        }
+      }
       for (k = 0; k < 3; k++) S.tr[k] = S.tr0[k] + (S.tr1[k] - S.tr0[k]) * pe;
       matrices(); actif = true;
     }
@@ -10670,7 +10621,7 @@ function creer(canvas, data, opt){
     poserMelange: function(pa, pb, t){
       for (var s = 0; s < NS; s++){ var a = (pa && pa.q && pa.q[M.seg[s]]) || [0, 0, 0, 1], b = (pb && pb.q && pb.q[M.seg[s]]) || [0, 0, 0, 1]; S.q[s] = qSlerp(a, b, t); S.q0[s] = S.q1[s] = S.q[s]; }
       var ta = (pa && pa.t) || [0, 0, 0], tb = (pb && pb.t) || [0, 0, 0]; for (var k = 0; k < 3; k++) S.tr[k] = S.tr0[k] = S.tr1[k] = ta[k] + (tb[k] - ta[k]) * t;
-      S.poseT = 1; matrices(); boucle();
+      S.poseT = POSE_FIN; matrices(); boucle();
     },
     normaleVisee: function(){ return S.nVise || null; },
     /* Image des identifiants, vue orthographique de face ou de dos, cadre en mètres c = [x0, x1, y0, y1] : rouge et vert,
@@ -10702,6 +10653,7 @@ function creer(canvas, data, opt){
         if (typeof x === "number") m[k] = x + (y - x) * t;
         else if (typeof x === "string" && x[0] === "#") m[k] = mh(x, y);
         else if (Array.isArray(x)) m[k] = x.map(function(v, i){ var w = y[i] != null ? y[i] : v; return v + (w - v) * t; });
+        else if (x && typeof x === "object" && y && typeof y === "object"){ var o = {}; Object.keys(x).forEach(function(j){ var a = x[j], b = y[j] != null ? y[j] : a; o[j] = Array.isArray(a) ? a.map(function(v, i){ return v + ((b[i] != null ? b[i] : v) - v) * t; }) : typeof a === "number" ? a + (b - a) * t : a; }); m[k] = o; }
         else m[k] = t < .5 ? x : y;
       });
       S.style = "_mix"; S.xf = 1; boucle();
@@ -10732,7 +10684,7 @@ function creer(canvas, data, opt){
       S.capW = o.w; S.capH = o.h; S.marge = o.marge || {l: 0, r: 0, t: 0, b: 0}; S.style = o.style || "papier"; S.camA = null; S.hl.fill(0); S.dm.fill(0); S.dY = S.dP = 0; S.xf = 1;
       cadrer(o.bb, o.yaw, o.pitch || 0, 0, o.serre || 1.08);
       rendre();
-      var url = canvas.toDataURL("image/png"), an = ancres(Math.round(o.w / 4), Math.round(o.h / 4));
+      var url = canvas.toDataURL("image/png"), an = ancres(Math.round(o.w / 3), Math.round(o.h / 3));
       S.capW = S.capH = 0; Object.assign(S.cam, g.cam); S.marge = g.marge; S.style = g.style; S.camA = g.camA; S.hl.set(g.hl); S.dm.set(g.dm); S.dY = g.dY; S.dP = g.dP; S.xf = g.xf;
       rendre();
       return {url: url, ancres: an};
@@ -10868,8 +10820,8 @@ var POSES = {
     cuisseR: [0, 6, 6], cuisseL: [1, 6, 6], jambeR: [2, 0, 0], jambeL: [2, 0, 0], piedR: [0, -5, 0], piedL: [0, -5, 0]},
   /* Accueil, planche III (v15) : trois quarts face, buste légèrement tourné par rapport au bassin, la tête tournée vers la
      caméra (de trois quarts), épaules larges, bras relâchés le long du corps. */
-  trois4Face: {bassin: [0, 2, 4], lombaire: [0, -1, -2], thorax: [-3, -2, -8], cou: [-2, 0, 6], tete: [-3, 2, 9], ceintureR: [0, -1.5, 4], ceintureL: [0, -1.5, 4],
-    brasR: [-2, 9, -4], brasL: [-3, 8, -4], avantbrasR: [10, 0, 52], avantbrasL: [10, 0, 52], mainR: [9, 2, 0], mainL: [8, 2, 0],
+  trois4Face: {bassin: [0, 2, 4], lombaire: [0, -1, -2], thorax: [-3, -2, -8], cou: [-2, 0, 6], tete: [-3, 2, 9], ceintureR: [0, -2.4, 4], ceintureL: [0, -2.4, 4],
+    brasR: [-2, 9, -4], brasL: [-3, 8, -4], avantbrasR: [10, 0, 52], avantbrasL: [10, 0, 52], mainR: [11, 3, 0], mainL: [10, 3, 0],
     cuisseR: [-2, 2, 0], cuisseL: [4, 4, 6], jambeL: [8, 0, 0], piedL: [2, 0, 0]},
   /* Tête et cou */
   cou_face: COU,
@@ -11138,9 +11090,10 @@ function monter(host, env){
      Les lumières tournent avec la caméra (on regarde autour, on change de vue : les reliefs restent éclairés sous le bon
      angle) ; d'une vue à l'autre, leur disposition change en même temps que la caméra se déplace. */
   function eclairageVue(c){
-    /* Une seule clé directionnelle à 45° (en haut à gauche, à 45° de l'axe de visée) et un seul contre-jour fin, liés à la
-       caméra : ils tournent avec elle, le relief est toujours creusé sous le même angle. */
-    return {k: [-.5, .5, .7071], f: [.7, -.1, .7], r1: [.62, .3, -.72], r2: [-.62, .3, -.72], y: c.yaw, p: 0, i: 1, suit: 1};
+    /* Une seule clé directionnelle franche, décalée de 45° en azimut (à gauche) et de 45° en élévation par rapport à
+       l'axe de visée, un débouchage froid très léger (en face, à droite, un peu bas) et un seul contre-jour net (derrière,
+       à droite), tous liés à la caméra : ils tournent avec elle, le relief est toujours creusé sous le même angle. */
+    return {k: [-.5, .7071, .5], f: [.72, -.18, .67], r1: [.62, .3, -.72], r2: [-.62, .3, -.72], y: c.yaw, p: 0, i: 1, suit: 1};
   }
   function cadrage(duree){
     if (!eng) return; eng.marges(marges());
@@ -11391,8 +11344,13 @@ function monter(host, env){
     return E[j];
   }
   function voisine(sens){ var x = voisineDe(sens); if (x) setVue(x.v, x.c); return !!x; }
+  /* Purge stricte des gestes (Safari iOS peut perdre la fin d'un doigt) : sans elle, un pointeur périmé laissait np ≥ 1,
+     chaque toucher comptait comme un deuxième doigt (pincement) et n'atteignait jamais choisir(). */
+  function purgerGestes(){ ptr = {}; np = 0; glisse = false; bascule = false; root.classList.remove("c3-glisse"); }
   cv.addEventListener("pointerdown", function(e){
     if (!eng) return; passerIntro();
+    /* Premier doigt d'un nouveau geste : ce qui restait de l'ancien est périmé. */
+    if (e.isPrimary && np) purgerGestes();
     ptr[e.pointerId] = {x: e.clientX, y: e.clientY}; np = Object.keys(ptr).length;
     try { cv.setPointerCapture(e.pointerId); } catch (er){}
     if (np === 1){ glisse = false; bascule = false; x0 = e.clientX; y0 = e.clientY; }
@@ -11455,6 +11413,19 @@ function monter(host, env){
     var r = cv.getBoundingClientRect(), k = eng.viser(c.clientX - r.left, c.clientY - r.top); choisir(k, eng.normaleVisee());
   }, {passive: true});
   cv.addEventListener("pointerup", fin); cv.addEventListener("pointercancel", annule);
+  /* Vérité du système : plus aucun doigt sur l'écran, plus aucun pointeur actif. Si le doigt s'est levé sans que son
+     pointeur le dise et que c'était un toucher (un seul doigt, moins de 12 px, bref), il est désigné ici. */
+  function finDoigts(e){
+    if (mort || (e.touches && e.touches.length) || !np) return;
+    var c = e.changedTouches && e.changedTouches[0], t0 = cv._t0, r = cv.getBoundingClientRect();
+    var toucher = e.type === "touchend" && !glisse && np === 1 && c && t0 && eng && Math.hypot(c.clientX - t0.x, c.clientY - t0.y) <= 12 && Date.now() - t0.t < 600 && c.clientX >= r.left && c.clientX <= r.right && c.clientY >= r.top && c.clientY <= r.bottom;
+    purgerGestes();
+    if (toucher){ var k = eng.viser(c.clientX - r.left, c.clientY - r.top); choisir(k, eng.normaleVisee()); } else legendes();
+  }
+  function perte(){ if (np){ purgerGestes(); legendes(); } }
+  function masque(){ if (document.hidden) perte(); }
+  document.addEventListener("touchend", finDoigts, {passive: true, capture: true}); document.addEventListener("touchcancel", finDoigts, {passive: true, capture: true});
+  window.addEventListener("blur", perte); document.addEventListener("visibilitychange", masque);
   cv.addEventListener("pointerleave", function(){ clearTimeout(survolT); elBulle.hidden = true; });
   /* Molette : la page défile ; avec Ctrl (ou le pincement du pavé tactile), le corps se rapproche. */
   cv.addEventListener("wheel", function(e){ if (!eng || !e.ctrlKey) return; e.preventDefault(); passerIntro(); zoom(Math.exp(Math.max(-60, Math.min(60, e.deltaY)) * .006)); legendes(false); legendes(); }, {passive: false});
@@ -11558,7 +11529,7 @@ function monter(host, env){
     feminin: FEM,
     listeDe: listeDe, disposer: disposer, reg: reg, cadre: cadre, cadrage: cadrage, theme: theme, nomPiece: nomPiece,
     pause: function(){ legendes(false); }, reprise: function(){ if (eng){ cadrage(0); eng.redessiner(); legendes(); } },
-    detruire: function(){ mort = true; if (zone) zone.fermer(); tIntro.forEach(clearTimeout); clearTimeout(tRegion); clearTimeout(lblT); clearTimeout(survolT); window.removeEventListener("resize", taille); if (RO) RO.disconnect(); if (prof) prof.fermer(); if (eng) eng.detruire(); eng = null; }
+    detruire: function(){ mort = true; document.removeEventListener("touchend", finDoigts, true); document.removeEventListener("touchcancel", finDoigts, true); window.removeEventListener("blur", perte); document.removeEventListener("visibilitychange", masque); if (zone) zone.fermer(); tIntro.forEach(clearTimeout); clearTimeout(tRegion); clearTimeout(lblT); clearTimeout(survolT); window.removeEventListener("resize", taille); if (RO) RO.disconnect(); if (prof) prof.fermer(); if (eng) eng.detruire(); eng = null; }
   };
   syncUI(); demarrer();
   return api;
@@ -12998,11 +12969,10 @@ function storyInit(){
   HOME.step = -1;
   HOME.map = A.Map.create(host, {uid: "story", interactive: false, tooltip: false, keyboard: false, wheel: false, chooser: false, titles: false, names: nm, kindOf: kindOf, view: "face", depth: "sup", label: "Planche anatomique, vue antérieure, muscles superficiels"});
   HOME.map.svg.style.touchAction = "auto";
-  if (ATLAS.ombrePrecharger) ATLAS.ombrePrecharger(["face-sup", "dos-sup", "dos-prof", "face-os"]);
-  if (ATLAS.Map.prefibres) ATLAS.Map.prefibres(["dos-sup", "dos-prof"]);
+  if (ATLAS.ombrePrecharger) ATLAS.ombrePrecharger(["face-sup", "dos-sup", "dos-prof", "face-os"], true);
   HOME.lbl = A.Labels.create(host, HOME.map, {name: nm, onPick: function(id){ openSheet(id); }});
   if (!REDUCED) HOME.map.svg.classList.add("pop-in");
-  $$(".atlas-svg.pop-in .regions .r", host).forEach(function(p, k){ var bb = p.getAttribute("d").match(/^M[\d.]+ ([\d.]+)/); var y = bb ? +bb[1] : 0; p.style.setProperty("--pd", (y / 900 * 0.9).toFixed(2) + "s"); });
+  if (!REDUCED){ popDelais(HOME.map.svg, .9); ombreBalayage(HOME.map.svg.querySelector(".view-face .layer-sup .ombre2d"), .9, .2, false); }
   HOME.lbl.hide(true);
   storyGo(0, true);
   setTimeout(function(){ if (HOME.step === 0){ HOME.lbl.hide(false); } }, REDUCED ? 0 : 1100);
@@ -13128,6 +13098,7 @@ __rt.on(document, "keydown", function(){ if (INTRO.skip) INTRO.skip(); });
 function storyReplay(){
   var svg = HOME.map && HOME.map.svg; if (!svg || REDUCED) return;
   svg.classList.remove("pop-in"); void svg.getBoundingClientRect(); svg.classList.add("pop-in");
+  ombreBalayage(svg.querySelector(".view-" + HOME.map.view() + " .layer-" + HOME.map.depth() + " .ombre2d"), .9, .2, false);
   if (HOME.lbl && HOME.step === 0){ HOME.lbl.hide(true); setTimeout(function(){ if (HOME.step === 0) HOME.lbl.hide(false); }, 900); }
   var st = $("#story"); if (st){ st.classList.remove("rise"); void st.offsetWidth; st.classList.add("rise"); }
 }
@@ -13298,8 +13269,7 @@ RENDER.carte = function(){
     "</div></div>";
   MU.map = A.Map.create($("#map"), {uid: "main", names: nm, kindOf: kindOf, tipHtml: tipHtml, onPick: function(id, kd, ev){ MU.pickEv = ev || null; if (!P.prefs.hintAtlas){ P.prefs.hintAtlas = 1; save(); var h = $("#map-hint"); if (h) h.remove(); } carteChoisir(id); }, label: "Carte anatomique interactive", view: MU.view, depth: MU.depth, art: MU.art});
   MU.lbl = A.Labels.create($("#map"), MU.map, {name: lblName, animate: false, onPick: function(id){ goTo(id); }});
-  if (ATLAS.ombrePrecharger) ATLAS.ombrePrecharger([MU.view + "-" + MU.depth].concat(["face-sup", "dos-sup", "face-prof", "dos-prof", "face-prof2", "dos-prof2", "face-os", "dos-os"]));
-  if (ATLAS.Map.prefibres) ATLAS.Map.prefibres([MU.view + "-sup", MU.view + "-prof", MU.view + "-prof2", "face-sup", "dos-sup", "face-prof", "dos-prof", "face-prof2", "dos-prof2"]);
+  if (ATLAS.ombrePrecharger) ATLAS.ombrePrecharger([MU.view + "-" + MU.depth], true);
   MU.prof = A.ProfPill ? A.ProfPill($("#depth-ctl"), {T: T, label: "Profondeur", index: A.Map.DEPTHS.indexOf(MU.depth), items: A.Map.DEPTHS.map(function(d, i){ return {ico: A.icoProf(["m0", "m1", "m2", "os"][i]), t: T(DEPTH_LBL[d][0])}; }), onChange: function(i){ setDepth(A.Map.DEPTHS[i]); }}) : null;
   MU.fit = null;
   $("#map").addEventListener("click", function(e){ if (Date.now() - (MU.pickT || 0) > 450 && !e.target.closest(".r, .lbl, .map-chooser, button")){ carteMsg(null); if (MU.map && $("#sheet").hidden) MU.map.clear("is-sel fam"); } });
@@ -15715,11 +15685,16 @@ function carteChoisir(id){
     var cur = MU.map.vb ? MU.map.vb() : null;
     /* On ne recadre que si la carte n'est pas déjà aussi près (ou plus près) de ce muscle. */
     if (!cur || cur[2] > vb[2] * 1.15 || cx < cur[0] || cx > cur[0] + cur[2] || cy < cur[1] || cy > cur[1] + cur[3]){
-      /* Téléphone, fiche ouverte : la feuille couvre le bas de la carte ; le muscle se place au milieu de la partie visible. */
+      /* Fiche ouverte : sur téléphone, la feuille couvre le bas de la carte ; sur ordinateur, le volet couvre sa droite.
+         Le muscle se place au milieu de la partie restée visible. */
       var hr = MU.map.svg.getBoundingClientRect(), sr = ouverte && sh.getBoundingClientRect();
+      var w = Math.max(vb[2], vb[3] * A.Map.W / A.Map.H), h = w * A.Map.H / A.Map.W, s = Math.min(hr.width / w, hr.height / h);
       if (sr && sr.top > hr.top + 80 && sr.top < hr.bottom){
-        var w = Math.max(vb[2], vb[3] * A.Map.W / A.Map.H), h = w * A.Map.H / A.Map.W, s = Math.min(hr.width / w, hr.height / h), dy = ((hr.top + hr.bottom) / 2 - (hr.top + sr.top) / 2) / s;
+        var dy = ((hr.top + hr.bottom) / 2 - (hr.top + sr.top) / 2) / s;
         vb = [vb[0], vb[1] + dy, vb[2], vb[3]];
+      } else if (sr && sr.left > hr.left + hr.width * .35 && sr.left < hr.right){
+        var dx = ((hr.left + hr.right) / 2 - (hr.left + sr.left) / 2) / s;
+        vb = [vb[0] + dx, vb[1], vb[2], vb[3]];
       }
       MU.map.zoomTo(vb, true); var zs = $("#zone-sel"); if (zs && z){ zs.value = z.z.id; zoneFit(); }
     }
@@ -16066,7 +16041,9 @@ function storyRendu(Pr){
   var a3d = st.classList.contains("a3d"), pret = a3d && st.classList.contains("a3d-ok") && C3.story && C3.story.eng;
   SC.P = P;
   if (C3.story){ var off = P > 2.995; if (off !== SC.pause){ SC.pause = off; C3.story.suspendre(off); } }
-  if (P > .05) m.svg.classList.remove("pop-in");
+  /* L'éclosion d'ouverture de la planche s'arrête dès qu'on défile ; celle des passages 04 à 09 (storyPop) se poursuit
+     même si le doigt fait encore glisser la page : muscles, fibres et ombre entrent ensemble. */
+  if (P > .05 && P < 2.9) m.svg.classList.remove("pop-in");
   var o = 1, rot = 0, sca = 1, view = "face", depth = "sup", vb = null, pa = null, pb = null, pt = 0, duo = 0, pap = 0, fade = 0, sansPlanche = false, faisceau = -1, vig = 0, monte = -1;
   if (!(P >= 2 && P < 3)) scGhost(null);
   if (P >= 3){
@@ -16206,9 +16183,10 @@ function sqEase(u, d, l){ var x = Math.max(0, Math.min(1, (u - d) / l)); return 
 var SQ_TEMPS = [
   /* 01 → 02 : la tête mène, le buste suit, puis le bassin, enfin les jambes. */
   {tete: [0, .62], cou: [.02, .64], thorax: [.08, .7], lombaire: [.12, .7], ceinture: [.1, .72], bras: [.14, .74], avantbras: [.18, .74], main: [.2, .74], bassin: [.16, .76], cuisse: [.22, .74], jambe: [.24, .74], pied: [.26, .72]},
-  /* 02 → 03 : le corps se retourne de l'autre côté pendant que la caméra le contourne : la tête mène, le buste suit,
-     le bassin et les jambes après (un pas) ; les épaules se relâchent en dernier, les mains suivent le bras. */
-  {tete: [0, .7], cou: [.03, .7], thorax: [.08, .72], lombaire: [.12, .74], bras: [.12, .76], avantbras: [.16, .78], main: [.2, .78], bassin: [.16, .78], cuisse: [.22, .76], jambe: [.24, .76], pied: [.26, .74], ceinture: [.45, .55]}
+  /* 02 → 03 : le corps se retourne franchement de l'autre côté (environ 50°) pendant que la caméra le contourne en arc
+     (environ 35°) : la tête mène nettement, le buste suit, puis le bassin et les jambes (un pas) ; les bras suivent le
+     buste avec un temps de retard, les poignets encore après ; les épaules se relâchent en dernier. */
+  {tete: [0, .56], cou: [.04, .6], thorax: [.12, .66], lombaire: [.17, .68], bras: [.2, .7], avantbras: [.24, .7], main: [.3, .68], bassin: [.22, .72], cuisse: [.28, .68], jambe: [.3, .68], pied: [.32, .66], ceinture: [.62, .38]}
 ];
 function sqPose(i, u){
   var PS = A.Vue3D.POSES, a = PS[SQ_POSES[i]], b = PS[SQ_POSES[i + 1]], T = SQ_TEMPS[i], out = {};
@@ -16222,16 +16200,21 @@ function sqPose(i, u){
   var add = function(k, v){ var o = out[k] || [0, 0, 0]; out[k] = [o[0] + v[0], o[1] + v[1], o[2] + v[2]]; };
   add("cuisse" + lib, [16 * pas, 2 * pas, 0]); add("jambe" + lib, [26 * pas, 0, 0]); add("pied" + lib, [10 * pas, 0, 0]);
   add("cuisse" + ap, [-3 * pas, 0, 0]); add("bassin", [0, (lib === "L" ? -3 : 3) * pas, 0]);
-  var bal = Math.sin(Math.PI * 2 * sqEase(u, .16, .7)) * Math.sin(Math.PI * sqEase(u, .16, .7));
-  add("brasR", [9 * bal, 2 * Math.abs(bal), 0]); add("brasL", [-9 * bal, 2 * Math.abs(bal), 0]);
-  add("avantbrasR", [6 * Math.abs(bal), 0, 8 * bal]); add("avantbrasL", [6 * Math.abs(bal), 0, -8 * bal]);
-  /* Mains : elles suivent le bras avec un temps de retard (le poignet se plie dans le sens du mouvement puis revient),
-     et l'avant-bras tourne un peu (pronation, supination). */
-  var tr = Math.sin(Math.PI * 2 * sqEase(u, .24, .7)) * Math.sin(Math.PI * sqEase(u, .24, .7));
-  add("mainR", [-10 * tr, 3 * tr, 0]); add("mainL", [10 * tr, -3 * tr, 0]);
-  /* Respiration : le thorax s'ouvre pendant le mouvement (inspiration), les épaules montent un peu, puis tout se pose. */
+  /* Balancement des bras pendant le pas (un aller-retour qui s'amortit, bras opposés, jamais en boucle) ; l'avant-bras
+     suit le bras un peu après et tourne (pronation, supination). */
+  var e1 = sqEase(u, .14, .72), am = Math.sin(Math.PI * e1), bal = Math.sin(Math.PI * 2 * e1) * am * (1 - .35 * e1);
+  var ab = Math.sin(Math.PI * 2 * sqEase(u, .2, .72)) * Math.sin(Math.PI * sqEase(u, .2, .72));
+  var A1 = i === 0 ? 9 : 13;
+  add("brasR", [A1 * bal, 2.5 * am, 0]); add("brasL", [-A1 * bal, 2.5 * am, 0]);
+  add("avantbrasR", [5 * am + 6 * Math.max(0, ab), 0, 14 * ab]); add("avantbrasL", [5 * am + 6 * Math.max(0, -ab), 0, -14 * ab]);
+  /* Mains et poignets : ils suivent l'avant-bras avec un temps de retard (le poignet fléchit contre le mouvement, puis
+     revient, et se pose relâché) ; la main tourne un peu avec l'avant-bras. */
+  var em = sqEase(u, .26, .7), tr = Math.sin(Math.PI * 2 * em) * Math.sin(Math.PI * em), lev = Math.sin(Math.PI * em);
+  add("mainR", [-16 * tr + 6 * lev, 4 * lev, 0]); add("mainL", [16 * tr + 6 * lev, 4 * lev, 0]);
+  /* Respiration : le thorax se soulève pendant le mouvement (inspiration), les épaules montent à peine, puis tout se
+     pose ; au 03, les épaules descendent en dernier (relâchement, voir les temps de la ceinture). */
   var rs = Math.sin(Math.PI * sqEase(u, .04, .9));
-  add("thorax", [-2.2 * rs, 0, 0]); add("lombaire", [-.8 * rs, 0, 0]); add("cou", [1.2 * rs, 0, 0]); add("ceintureR", [0, 1.4 * rs, 0]); add("ceintureL", [0, 1.4 * rs, 0]);
+  add("thorax", [-2.6 * rs, 0, 0]); add("lombaire", [-.8 * rs, 0, 0]); add("cou", [1.2 * rs, 0, 0]); add("ceintureR", [0, 1.6 * rs, 0]); add("ceintureL", [0, 1.6 * rs, 0]);
   return out;
 }
 /* Caméra : entre deux images clés, interpolation enveloppée, plus un arc (cap), un recul et une contre-plongée qui
@@ -16306,14 +16289,16 @@ function storyPop(i, pose){
   var m = HOME.map, svg = m && m.svg; if (!svg) return;
   clearTimeout(HOME.popT); clearTimeout(HOME.lblT); HOME.lbl.hide(true);
   if (REDUCED){ pose(); storyFrame(false); return; }
+  /* Muscles et calque d'ombre (masque au même rythme) sortent ensemble, puis la planche suivante entre de la même
+     façon : ombre peinte et planche vectorielle à la même image. */
+  var omDe = function(){ return m.view && m.depth ? svg.querySelector(".view-" + m.view() + " .layer-" + m.depth() + " .ombre2d") : null; };
   popDelais(svg, .15); svg.classList.remove("pop-in"); void svg.getBoundingClientRect(); svg.classList.add("pop-out");
+  ombreBalayage(omDe(), .15, .3, true);
   HOME.popT = setTimeout(function(){
     if (HOME.step !== i) return;
     svg.classList.remove("pop-out"); pose(); storyFrame(false); HOME.lbl.hide(true);
     popDelais(svg, .55); void svg.getBoundingClientRect(); svg.classList.add("pop-in");
-    var om = svg.querySelector(".view-" + STORY[i].v + " .layer-" + STORY[i].d + " .ombre2d");
-    var fb = svg.querySelector(".view-" + STORY[i].v + " .layer-" + STORY[i].d + " .fibres");
-    [om, fb].forEach(function(x){ if (x && x.animate) x.animate([{opacity: 0}, {opacity: 0, offset: .12}, {opacity: 1}], {duration: 1150, easing: "cubic-bezier(.3,0,.3,1)"}); });
+    ombreBalayage(svg.querySelector(".view-" + STORY[i].v + " .layer-" + STORY[i].d + " .ombre2d"), .55, .2, false);
     HOME.lblT = setTimeout(function(){ if (HOME.step === i) HOME.lbl.hide(false); }, 850);
   }, 430);
 }
@@ -16336,15 +16321,26 @@ function c3Imprimer(){
 }
 function c3Carte(){
   var V = C3.v, eng = V && V.eng, box = $("#c3p-prev"); if (!eng || !box) return;
-  var mobile = window.matchMedia("(pointer:coarse)").matches, PW = mobile ? 1654 : 2480, PH = Math.round(PW * 1.4142), k = PW / 2480;
-  var M = Math.round(120 * k), top = Math.round(360 * k), col = Math.round(420 * k), fw = PW - 2 * M, fh = PH - top - Math.round(230 * k);
-  var r = V.reg(), st = V.etat, cad = V.cadre(true), muette = C3P.type === "muette";
+  var r = V.reg(), st = V.etat, cad = V.cadre(), muette = C3P.type === "muette";
+  /* Cadrage : la région affichée, vue sous son angle, aussi grande que possible ; une région plus large que haute
+     (buste, hanches) passe en page paysage. */
+  var bb = cad.bb, ex = (bb[1][0] - bb[0][0]) / 2, ez = (bb[1][2] - bb[0][2]) / 2, ey = (bb[1][1] - bb[0][1]) / 2;
+  var hw = Math.abs(Math.cos(cad.yaw)) * ex + Math.abs(Math.sin(cad.yaw)) * ez, pay = !!r.id && hw / ey > .78;
+  var mobile = window.matchMedia("(pointer:coarse)").matches, A4 = mobile ? 1654 : 2480, PW = pay ? Math.round(A4 * 1.4142) : A4, PH = pay ? A4 : Math.round(A4 * 1.4142), k = A4 / 2480;
+  var M = Math.round(120 * k), top = Math.round(360 * k), col = Math.round((pay ? 500 : 410) * k), fw = PW - 2 * M, fh = PH - top - Math.round(200 * k);
   var o;
-  try { o = eng.planche({w: fw, h: fh, bb: cad.bb, yaw: cad.yaw, pitch: cad.pitch, serre: 1.06, marge: {l: col, r: col, t: Math.round(30 * k), b: Math.round(30 * k)}}); }
+  /* Le corps peut s'étendre un peu sous les colonnes de noms (il s'y fond dans le papier) : le sujet est plus grand. */
+  try { o = eng.planche({w: fw, h: fh, bb: cad.bb, yaw: cad.yaw, pitch: cad.pitch, serre: r.id ? 1.02 : 1.04, marge: {l: Math.round(col * .5), r: Math.round(col * .5), t: Math.round(24 * k), b: Math.round(24 * k)}, style: "papier"}); }
   catch (e){ box.innerHTML = '<p class="faint">' + esc(T("La carte n'a pas pu être préparée sur cet appareil.")) + "</p>"; return; }
-  /* Seules les structures du cadre central sont légendées : les colonnes de noms restent libres. */
-  var an = o.ancres.filter(function(a){ var px = a.x * fw; return px > col + 30 * k && px < fw - col - 30 * k; });
-  var L = V.disposer(V.listeDe(an, fw, fh, 24, fw / 2), fw, fh, {cx: fw / 2, pas: 78 * k, haut: 50 * k, bas: fh - 50 * k, xg: col - 30 * k, xd: fw - col + 30 * k});
+  /* Légendes : jusqu'à 30 noms (26 en paysage), l'interligne se resserre pour qu'ils tiennent. */
+  var dansRegion = null;
+  if (r.id && st.c <= 4){ dansRegion = {}; V.structures(r.id).forEach(function(x){ dansRegion[x.id] = 1; }); }
+  /* Toutes les structures visibles dans le cadre central sont légendées ; celles de la région passent en premier. */
+  /* Carte d'un membre : les muscles de l'autre membre (bras sur une carte de la cuisse, et inversement) ne sont pas nommés. */
+  var exclu = /^(cuisse_genou|jambe_pied)$/.test(r.id) ? [1, 2] : /^(epaule_bras|avantbras_main)$/.test(r.id) ? [6, 7] : [];
+  var an = o.ancres.filter(function(a){ var px = a.x * fw; return px >= col * .9 && px <= fw - col * .9 && exclu.indexOf(eng.els[a.k].r0) < 0; }).map(function(a){ var e = eng.els[a.k]; return dansRegion && !(e.a && dansRegion[e.a]) ? {k: a.k, x: a.x, y: a.y, n: a.n * .45} : a; });
+  var MAX = pay ? 26 : 30, pas = Math.min(78 * k, (fh - 100 * k) / (MAX / 2 + 1));
+  var L = V.disposer(V.listeDe(an, fw, fh, MAX, fw / 2), fw, fh, {cx: fw / 2, pas: pas, haut: 50 * k, bas: fh - 50 * k, xg: col - 30 * k, xd: fw - col + 30 * k});
   var G = L.filter(function(l){ return l.g; }).sort(function(a, b){ return a.ly - b.ly; }), D = L.filter(function(l){ return !l.g; }).sort(function(a, b){ return a.ly - b.ly; });
   G.concat(D).forEach(function(l, i){ l.no = i + 1; });
   var img = new Image();
@@ -16353,7 +16349,7 @@ function c3Carte(){
     x.fillStyle = "#fff"; x.fillRect(0, 0, PW, PH);
     x.drawImage(img, M, top, fw, fh);
     /* Ce qui dépasse du cadre central (le reste du corps) se fond dans le papier, sous les colonnes de noms. */
-    [[M + col - 70 * k, M + col + 10 * k, M, M + col - 70 * k], [M + fw - col + 70 * k, M + fw - col - 10 * k, M + fw - col + 70 * k, PW - M]].forEach(function(z){
+    [[M + col * .62, M + col + 10 * k, M, M + col * .62], [M + fw - col * .62, M + fw - col - 10 * k, M + fw - col * .62, PW - M]].forEach(function(z){
       var g = x.createLinearGradient(z[0], 0, z[1], 0); g.addColorStop(0, "rgba(255,255,255,1)"); g.addColorStop(1, "rgba(255,255,255,0)");
       x.fillStyle = g; x.fillRect(Math.min(z[0], z[1]), top, Math.abs(z[1] - z[0]), fh);
       x.fillStyle = "#fff"; x.fillRect(z[2], top, z[3] - z[2], fh);
@@ -16398,7 +16394,7 @@ function c3Carte(){
     /* Pied : crédit du modèle */
     x.textBaseline = "alphabetic"; x.fillStyle = "#8e8e93"; x.font = "400 " + 24 * k + "px " + F;
     x.fillText(T("Modèle 3D : BodyParts3D, © The Database Center for Life Science, licence CC BY 4.0. Planche : Atlas."), M, PH - 96 * k);
-    C3P.canvas = c; C3P.nom = "anatomie-" + (r.id || "corps") + "-" + C3P.type + ".png";
+    C3P.canvas = c; C3P.pay = pay; C3P.nom = "anatomie-" + (r.id || "corps") + "-" + C3P.type + ".png";
     var out;
     try { out = c.toDataURL("image/png"); } catch (e){ out = null; }
     C3P.url = out;
@@ -16411,6 +16407,9 @@ function c3Print(){
   var z = $("#c3-print"); if (!z){ z = document.createElement("div"); z.id = "c3-print"; document.body.appendChild(z); }
   z.innerHTML = '<img src="' + C3P.url + '" alt="">';
   document.body.classList.add("c3-printing");
+  /* Carte en paysage (buste, hanches) : la page d'impression aussi. */
+  var pg = document.getElementById("c3-page"); if (!pg){ pg = document.createElement("style"); pg.id = "c3-page"; document.head.appendChild(pg); }
+  pg.textContent = C3P.pay ? "@media print{@page{size:A4 landscape; margin:0}}" : "@media print{@page{size:A4 portrait; margin:0}}";
   var fin = function(){ document.body.classList.remove("c3-printing"); window.removeEventListener("afterprint", fin); };
   window.addEventListener("afterprint", fin);
   setTimeout(function(){ try { window.print(); } catch (e){ toast("Impression indisponible ici : enregistre l'image"); } setTimeout(fin, 60000); }, 120);
@@ -16451,11 +16450,48 @@ function ombreCharger(nom){
   });
   return c;
 }
-/* Précharge une liste de planches (« vue-profondeur »), l'une après l'autre, la première tout de suite. */
-window.ATLAS.ombrePrecharger = function(L){
+/* Précharge une liste de planches (« vue-profondeur »), l'une après l'autre, la première tout de suite ; avec « tout »,
+   puis les 16 calques (les 8 de la morphologie affichée d'abord, puis ceux de l'autre), téléchargés et décodés en
+   amont : une planche, une profondeur ou une morphologie qui change trouve son calque prêt, posé à la même image. */
+window.ATLAS.ombrePrecharger = function(L, tout){
   var B = window.ATLAS.body2; if (!B || !B.genere) return;
-  L.reduce(function(p, x){ return p.then(function(){ var q = x.split("-"); return ombreCharger(ombreNom(q[0], q[1])).p; }); }, Promise.resolve());
+  var noms = L.map(function(x){ var q = x.split("-"); return ombreNom(q[0], q[1]); });
+  if (tout){
+    var m = ombreNom("face", "sup").charAt(0), o = m === "f" ? "m" : "f";
+    [m, o].forEach(function(mo){ ["face", "dos"].forEach(function(v){ ["sup", "prof", "prof2", "os"].forEach(function(d){ var n = mo + "-" + v + "-" + d + ".webp"; if (noms.indexOf(n) < 0) noms.push(n); }); }); });
+  }
+  var libre = window.requestIdleCallback ? function(f){ window.requestIdleCallback(f, {timeout: 600}); } : function(f){ setTimeout(f, 120); };
+  noms.reduce(function(p, n, i){ return p.then(function(){ return i < 2 ? ombreCharger(n).p : new Promise(function(ok){ libre(function(){ ombreCharger(n).p.then(ok); }); }); }); }, Promise.resolve());
 };
+/* Le calque d'ombre d'une planche suit l'apparition de ses muscles (storyPop) : un masque qui descend du haut de la
+   planche au rythme de leurs retards (--pd = y / 900 × k), avec la même durée d'entrée ; « sortir » efface le calque
+   dans le même ordre. À la fin de l'entrée, le masque est levé. */
+function ombreBalayage(g, k, dur, sortir){
+  if (!g) return;
+  var NS = "http://www.w3.org/2000/svg", id = g.getAttribute("data-mk"), mk = id ? document.getElementById(id) : null, gr;
+  if (!mk){
+    id = "omk" + (++OMBRE_N); g.setAttribute("data-mk", id);
+    mk = document.createElementNS(NS, "mask"); mk.setAttribute("id", id); mk.setAttribute("maskUnits", "userSpaceOnUse"); mk.setAttribute("maskContentUnits", "userSpaceOnUse");
+    ["x", "y", "width", "height"].forEach(function(a, i){ mk.setAttribute(a, [-60, -60, 520, 1020][i]); });
+    gr = document.createElementNS(NS, "linearGradient"); gr.setAttribute("id", id + "g"); gr.setAttribute("gradientUnits", "userSpaceOnUse"); gr.setAttribute("x1", "0"); gr.setAttribute("x2", "0");
+    ["0", "1"].forEach(function(o){ var st = document.createElementNS(NS, "stop"); st.setAttribute("offset", o); gr.appendChild(st); });
+    var rc = document.createElementNS(NS, "rect"); ["x", "y", "width", "height"].forEach(function(a, i){ rc.setAttribute(a, [-60, -60, 520, 1020][i]); }); rc.setAttribute("fill", "url(#" + id + "g)");
+    mk.appendChild(gr); mk.appendChild(rc); g.insertBefore(mk, g.firstChild);
+  } else gr = mk.querySelector("linearGradient");
+  var bande = 900 * dur / Math.max(k, .05), t0 = performance.now(), fin = (k + dur) * 1000 + 40;
+  /* Entrer : visible au-dessus du front, masqué dessous ; sortir : l'inverse. */
+  var st = gr.querySelectorAll("stop"); st[0].setAttribute("stop-color", sortir ? "#000" : "#fff"); st[1].setAttribute("stop-color", sortir ? "#fff" : "#000");
+  /* Le front est calé sur l'entrée des muscles (leur retard est pris au début de leur tracé, leur opacité monte en
+     une vingtaine de centièmes) : l'ombre devient pleine à la même image que le muscle. */
+  function poser(t){ var f = 900 * (t / 1000) / Math.max(k, .05) + (sortir ? 0 : -40); gr.setAttribute("y1", (f - bande).toFixed(1)); gr.setAttribute("y2", f.toFixed(1)); }
+  poser(0); g.setAttribute("mask", "url(#" + id + ")"); g.style.opacity = "";
+  if (g._mkRaf) cancelAnimationFrame(g._mkRaf);
+  (function pas(){
+    var t = performance.now() - t0;
+    if (t >= fin){ g._mkRaf = 0; if (sortir) g.style.opacity = "0"; else g.removeAttribute("mask"); return; }
+    poser(t); g._mkRaf = requestAnimationFrame(pas);
+  })();
+}
 window.ATLAS.ombre2d = function(v, d, sil){
   var B = window.ATLAS.body2; if (!B || !B.genere) return null;
   var nom = ombreNom(v, d), U = ombreUrls(nom); if (!U.length) return null;
@@ -16470,9 +16506,6 @@ window.ATLAS.ombre2d = function(v, d, sil){
   else c.p.then(function(r){ if (r){ im.setAttribute("href", r.url); g.classList.add("ok"); } else g.remove(); });
   return g;
 };
-
-/* Direction des fibres sur les planches 2D (générée par ombre2d.js, genererFibres). */
-window.ATLAS.FIB2D = {"angles":{"face":[[253.5,286.5,33,0.83,"pec_abd"],[146.5,286.5,146,0.83,"pec_abd"],[294.1,227.6,150,1,"delt_moy"],[106,227,30,1,"delt_moy"],[217.7,254.5,18,1,"trap_inf"],[182.3,254.5,162,1,"trap_inf"],[274.5,225.4,133,1,"delt_ant"],[255.4,228.7,117,0.96,"pec_clav"],[125.6,225.3,48,1,"delt_ant"],[144.6,228.7,63,0.96,"pec_clav"],[217.2,177.2,148,0.96,"trap_sup"],[182.8,177.2,32,0.96,"trap_sup"],[330.2,409.5,157,0.95,"flechisseur_ulnaire_carpe"],[69.1,410.7,23,0.95,"flechisseur_ulnaire_carpe"],[243,706.5,3,0.99,"gastro_lat"],[310,287.9,162,1,"triceps_lat"],[157.5,707,177,0.99,"gastro_lat"],[89.9,288.8,18,1,"triceps_lat"],[228.2,537.1,168,0.99,"long_adducteur"],[327.4,361.5,173,0.97,"ancone"],[343,368.4,161,0.97,"brachio_radial"],[347.4,377.9,163,0.96,"extenseurs_radiaux_carpe"],[340.3,409.1,169,0.94,"extenseur_ulnaire_carpe"],[343.3,425.1,168,0.93,"extenseur_ulnaire_carpe"],[356.5,444.6,166,0.93,"extenseur_doigts"],[237.7,360.9,9,1,"oblique_externe"],[245.8,826.3,1,0.99,"fibulaire_court"],[250.6,779,4,1,"fibulaire_long"],[249.2,844.4,170,0.97,"fibula"],[336.6,397.9,155,0.96,"flechisseur_radial_carpe"],[233.4,461.7,163,0.97,"grand_fessier"],[252.5,427.8,166,1,"moyen_fessier"],[214.3,583.8,177,1,"gracile"],[223.4,375.3,13,1,"erecteurs"],[235.8,321.3,20,1,"grand_dorsal"],[230.5,486,155,0.97,"pectine"],[217.7,365.7,2,0.99,"droit_abdomen"],[250.6,562.8,5,1,"droit_femoral"],[233.4,565.7,9,1,"sartorius"],[219.6,599.1,179,1,"semi_membraneux"],[222.4,595.8,180,1,"semi_tendineux"],[217.2,183.4,11,0.9,"scm"],[268.7,449.2,173,0.99,"tfl"],[243.9,773.8,5,1,"tibial_anterieur"],[258.7,582.9,4,1,"vaste_lateral"],[233.9,600.5,6,1,"vaste_medial"],[303.4,280.2,160,1,"biceps_long"],[245.3,587.2,173,1,"bf_long"],[293.7,285.6,157,1,"triceps_long"],[96.5,280.6,20,1,"biceps_long"],[154.7,586.7,7,1,"bf_long"],[106.3,286.1,23,1,"triceps_long"],[224.8,714.1,2,1,"gastro_med"],[175.2,714.6,178,1,"gastro_med"],[171.4,538,12,0.99,"long_adducteur"],[73.1,361.5,7,0.97,"ancone"],[56.9,369.3,19,0.97,"brachio_radial"],[53.2,377.5,17,0.96,"extenseurs_radiaux_carpe"],[59.5,410.4,11,0.94,"extenseur_ulnaire_carpe"],[56.8,424.6,12,0.93,"extenseur_ulnaire_carpe"],[43.5,444.6,14,0.93,"extenseur_doigts"],[162.3,360.9,172,1,"oblique_externe"],[154.2,826.3,178,0.99,"fibulaire_court"],[149.9,779.5,176,1,"fibulaire_long"],[150.8,844.9,10,0.97,"fibula"],[63.5,397.4,25,0.96,"flechisseur_radial_carpe"],[166.6,461.7,17,0.97,"grand_fessier"],[147.5,427.8,14,1,"moyen_fessier"],[185.7,583.8,3,1,"gracile"],[176.6,375.3,167,1,"erecteurs"],[164.2,321.3,160,1,"grand_dorsal"],[169.5,485.5,25,0.97,"pectine"],[182.3,366.2,178,0.99,"droit_abdomen"],[149.4,563.3,175,1,"droit_femoral"],[166.6,564.7,171,1,"sartorius"],[180.4,599.1,1,1,"semi_membraneux"],[177.6,595.3,0,1,"semi_tendineux"],[181.9,182.9,169,0.9,"scm"],[131.3,449.2,7,0.99,"tfl"],[156.1,774.3,175,1,"tibial_anterieur"],[141.3,583.4,176,1,"vaste_lateral"],[165.6,600.5,174,1,"vaste_medial"],[294,278.3,158,1,"biceps_court"],[106.1,278.3,22,1,"biceps_court"],[285.1,237.7,128,0.96,"delt_post"],[114.8,238.1,54,0.96,"delt_post"],[240.1,258.3,61,0.83,"pec_stern"],[159.9,258.3,119,0.83,"pec_stern"],[224.3,207.3,89,0.96,"trap_moyen"],[175.7,207.3,90,0.96,"trap_moyen"],[326.5,389,164,0.93,"flechisseur_ulnaire_carpe"],[73.6,388.5,16,0.93,"flechisseur_ulnaire_carpe"],[199.5,318,100,1,"diaphragme"],[333.8,367.9,142,0.99,"rond_pronateur"],[66.3,367.9,38,0.99,"rond_pronateur"],[233.4,515.1,158,0.98,"court_adducteur"],[230.1,560.9,1,1,"grand_adducteur"],[315.1,320.4,167,1,"brachial"],[280.9,250.9,151,0.98,"coracobrachial"],[348.6,394.4,164,0.96,"extenseurs_radiaux_carpe"],[348.1,440.3,159,0.95,"flechisseurs_doigts"],[344.8,404.1,166,0.94,"flechisseurs_doigts"],[359.5,429.7,155,0.92,"flechisseurs_doigts"],[239.6,470.7,80,0.83,"pelvi_trochanteriens"],[239.1,462.6,106,0.89,"pelvi_trochanteriens"],[253.9,436.8,163,1,"petit_fessier"],[245.3,437.8,3,0.99,"ilio_psoas"],[257.8,237.3,50,0.91,"sous_epineux"],[222,188.2,162,0.91,"elevateur_scapula"],[215.3,315.1,5,1,"erecteurs"],[233.4,476,84,0.95,"pelvi_trochanteriens"],[224.3,468.3,86,0.61,"pelvi_trochanteriens"],[250.1,251.2,8,0.86,"petit_pectoral"],[233.4,448.8,119,0.95,"piriforme"],[238.7,688.4,23,0.97,"poplite"],[222.4,399.1,166,1,"ilio_psoas"],[243.9,484.6,70,1,"pelvi_trochanteriens"],[215.3,235.9,151,1,"rhomboides"],[214.8,212.5,146,0.99,"rhomboides"],[253.9,265,166,0.99,"dentele_anterieur"],[237.7,741.8,8,1,"soleaire"],[201.9,294.6,180,0.99,"erecteurs"],[209.1,182.4,16,0.95,"splenius"],[337.8,366,163,0.95,"supinateur"],[265.9,215.9,81,0.85,"sus_epineux"],[265.4,257.9,43,0.8,"grand_rond"],[272.1,238.3,46,0.9,"petit_rond"],[250.6,587.2,5,1,"vaste_intermediaire"],[306.2,316,163,1,"triceps_med"],[93.8,316,17,1,"triceps_med"],[166.1,516.1,22,0.98,"court_adducteur"],[169.9,561.9,179,1,"grand_adducteur"],[85.1,319.4,13,1,"brachial"],[119.1,250.9,29,0.98,"coracobrachial"],[51.4,394.4,16,0.96,"extenseurs_radiaux_carpe"],[51.9,440.3,21,0.95,"flechisseurs_doigts"],[55.2,404,14,0.94,"flechisseurs_doigts"],[39.8,431.5,25,0.92,"flechisseurs_doigts"],[160.4,470.7,100,0.83,"pelvi_trochanteriens"],[160.9,462.6,74,0.89,"pelvi_trochanteriens"],[145.6,436.8,17,1,"petit_fessier"],[154.7,437.8,177,0.99,"ilio_psoas"],[142.7,237.3,130,0.92,"sous_epineux"],[178.5,188.2,18,0.91,"elevateur_scapula"],[184.7,315.1,175,1,"erecteurs"],[166.1,476,95,0.95,"pelvi_trochanteriens"],[175.7,468.3,95,0.61,"pelvi_trochanteriens"],[149.9,251.2,172,0.86,"petit_pectoral"],[166.6,448.8,61,0.95,"piriforme"],[161.3,688.4,157,0.97,"poplite"],[177.6,399.1,14,1,"ilio_psoas"],[156.6,484.6,110,1,"pelvi_trochanteriens"],[184.7,235.9,29,1,"rhomboides"],[185.2,212.5,34,0.99,"rhomboides"],[146.1,265,14,0.99,"dentele_anterieur"],[162.3,742.3,172,1,"soleaire"],[198.1,295.6,0,0.99,"erecteurs"],[190.9,182.4,164,0.95,"splenius"],[62.2,366,17,0.95,"supinateur"],[134.1,215.9,99,0.85,"sus_epineux"],[135.1,258.3,137,0.8,"grand_rond"],[127.9,238.3,134,0.9,"petit_rond"],[149.4,587.2,175,1,"vaste_intermediaire"],[248.7,626.8,178,1,"bf_court"],[151.3,627.7,2,1,"bf_court"],[236.8,509.9,142,0.96,"grand_adducteur"],[352.7,444.9,162,0.94,"flechisseurs_doigts"],[224.3,210.6,164,0.91,"erecteurs"],[233.4,268.8,1,0.99,"erecteurs"],[216.2,175.8,8,0.98,"erecteurs"],[207.6,218.7,9,0.93,"splenius"],[251.1,237.3,45,0.78,"sous_scapulaire"],[237.2,810.5,4,0.99,"tibial_posterieur"],[163.7,509.4,38,0.96,"grand_adducteur"],[47.3,444.9,18,0.94,"flechisseurs_doigts"],[175.7,210.6,16,0.91,"erecteurs"],[166.6,268.8,179,0.99,"erecteurs"],[183.8,176.7,172,0.98,"erecteurs"],[192.4,218.7,171,0.93,"splenius"],[149.4,237.3,135,0.78,"sous_scapulaire"],[162.8,811,176,0.99,"tibial_posterieur"],[201,190.6,179,0.96,"erecteurs"],[336.9,372.8,140,0.98,"rond_pronateur"],[63,373.2,40,0.98,"rond_pronateur"],[214.3,201.1,178,0.93,"erecteurs"],[185.7,202,2,0.93,"erecteurs"]],"dos":[[146.5,286.5,147,0.83,"pec_abd"],[253.5,286.5,34,0.83,"pec_abd"],[105.9,227.6,30,1,"delt_moy"],[294,227,150,1,"delt_moy"],[182.3,254.5,162,1,"trap_inf"],[217.7,254.5,18,1,"trap_inf"],[125.5,225.4,47,1,"delt_ant"],[144.6,228.7,63,0.96,"pec_clav"],[274.4,225.3,132,1,"delt_ant"],[255.4,228.7,117,0.96,"pec_clav"],[182.8,177.2,32,0.96,"trap_sup"],[217.2,177.2,148,0.96,"trap_sup"],[69.8,409.5,23,0.95,"flechisseur_ulnaire_carpe"],[330.9,410.7,157,0.95,"flechisseur_ulnaire_carpe"],[157,706.5,177,0.99,"gastro_lat"],[90,287.9,18,1,"triceps_lat"],[242.5,707,3,0.99,"gastro_lat"],[310.1,288.8,162,1,"triceps_lat"],[171.8,537.1,12,0.99,"long_adducteur"],[72.6,361.5,7,0.97,"ancone"],[57,368.4,19,0.97,"brachio_radial"],[52.6,377.9,17,0.96,"extenseurs_radiaux_carpe"],[59.7,409.1,11,0.94,"extenseur_ulnaire_carpe"],[56.7,425.1,12,0.93,"extenseur_ulnaire_carpe"],[43.5,444.6,14,0.93,"extenseur_doigts"],[162.3,360.9,171,1,"oblique_externe"],[154.2,826.3,179,0.99,"fibulaire_court"],[149.4,779,176,1,"fibulaire_long"],[150.8,844.4,10,0.97,"fibula"],[63.4,397.9,25,0.96,"flechisseur_radial_carpe"],[166.6,461.7,17,0.97,"grand_fessier"],[147.5,427.8,14,1,"moyen_fessier"],[185.7,583.8,3,1,"gracile"],[176.6,375.3,167,1,"erecteurs"],[164.2,321.3,160,1,"grand_dorsal"],[169.5,486,25,0.97,"pectine"],[182.3,365.7,178,0.99,"droit_abdomen"],[149.4,562.8,175,1,"droit_femoral"],[166.6,565.7,171,1,"sartorius"],[180.4,599.1,1,1,"semi_membraneux"],[177.6,595.8,0,1,"semi_tendineux"],[182.8,183.4,169,0.9,"scm"],[131.3,449.2,7,0.99,"tfl"],[156.1,773.8,175,1,"tibial_anterieur"],[141.3,582.9,176,1,"vaste_lateral"],[166.1,600.5,174,1,"vaste_medial"],[96.6,280.2,20,1,"biceps_long"],[154.7,587.2,7,1,"bf_long"],[106.3,285.6,23,1,"triceps_long"],[303.5,280.6,160,1,"biceps_long"],[245.3,586.7,173,1,"bf_long"],[293.7,286.1,157,1,"triceps_long"],[175.2,714.1,178,1,"gastro_med"],[224.8,714.6,2,1,"gastro_med"],[228.6,538,168,0.99,"long_adducteur"],[326.9,361.5,173,0.97,"ancone"],[343.1,369.3,161,0.97,"brachio_radial"],[346.8,377.5,163,0.96,"extenseurs_radiaux_carpe"],[340.5,410.4,169,0.94,"extenseur_ulnaire_carpe"],[343.2,424.6,168,0.93,"extenseur_ulnaire_carpe"],[356.5,444.6,166,0.93,"extenseur_doigts"],[237.7,360.9,8,1,"oblique_externe"],[245.8,826.3,2,0.99,"fibulaire_court"],[250.1,779.5,4,1,"fibulaire_long"],[249.2,844.9,170,0.97,"fibula"],[336.5,397.4,155,0.96,"flechisseur_radial_carpe"],[233.4,461.7,163,0.97,"grand_fessier"],[252.5,427.8,166,1,"moyen_fessier"],[214.3,583.8,177,1,"gracile"],[223.4,375.3,13,1,"erecteurs"],[235.8,321.3,20,1,"grand_dorsal"],[230.5,485.5,155,0.97,"pectine"],[217.7,366.2,2,0.99,"droit_abdomen"],[250.6,563.3,5,1,"droit_femoral"],[233.4,564.7,9,1,"sartorius"],[219.6,599.1,179,1,"semi_membraneux"],[222.4,595.3,180,1,"semi_tendineux"],[218.1,182.9,11,0.9,"scm"],[268.7,449.2,173,0.99,"tfl"],[243.9,774.3,5,1,"tibial_anterieur"],[258.7,583.4,4,1,"vaste_lateral"],[234.4,600.5,6,1,"vaste_medial"],[106,278.3,22,1,"biceps_court"],[293.9,278.3,158,1,"biceps_court"],[114.9,237.7,52,0.96,"delt_post"],[285.2,238.1,126,0.96,"delt_post"],[159.9,258.3,119,0.83,"pec_stern"],[240.1,258.3,61,0.83,"pec_stern"],[175.7,207.3,91,0.96,"trap_moyen"],[224.3,207.3,90,0.96,"trap_moyen"],[73.5,389,16,0.93,"flechisseur_ulnaire_carpe"],[326.4,388.5,164,0.93,"flechisseur_ulnaire_carpe"],[200.5,318,80,1,"diaphragme"],[66.2,367.9,38,0.99,"rond_pronateur"],[333.7,367.9,142,0.99,"rond_pronateur"],[166.6,515.1,22,0.98,"court_adducteur"],[169.9,560.9,179,1,"grand_adducteur"],[84.9,320.4,13,1,"brachial"],[119.1,250.9,29,0.98,"coracobrachial"],[51.4,394.4,16,0.96,"extenseurs_radiaux_carpe"],[51.9,440.3,21,0.95,"flechisseurs_doigts"],[55.2,404.1,14,0.94,"flechisseurs_doigts"],[40.5,429.7,25,0.92,"flechisseurs_doigts"],[160.4,470.7,100,0.83,"pelvi_trochanteriens"],[160.9,462.6,74,0.89,"pelvi_trochanteriens"],[146.1,436.8,17,1,"petit_fessier"],[154.7,437.8,177,0.99,"ilio_psoas"],[142.2,237.3,130,0.91,"sous_epineux"],[178,188.2,18,0.91,"elevateur_scapula"],[184.7,315.1,175,1,"erecteurs"],[166.6,476,96,0.95,"pelvi_trochanteriens"],[175.7,468.3,94,0.61,"pelvi_trochanteriens"],[149.9,251.2,172,0.86,"petit_pectoral"],[166.6,448.8,61,0.95,"piriforme"],[161.3,688.4,157,0.97,"poplite"],[177.6,399.1,14,1,"ilio_psoas"],[156.1,484.6,110,1,"pelvi_trochanteriens"],[184.7,235.9,29,1,"rhomboides"],[185.2,212.5,34,0.99,"rhomboides"],[146.1,265,14,0.99,"dentele_anterieur"],[162.3,741.8,172,1,"soleaire"],[198.1,294.6,0,0.99,"erecteurs"],[190.9,182.4,164,0.95,"splenius"],[62.2,366,17,0.95,"supinateur"],[134.1,215.9,99,0.85,"sus_epineux"],[134.6,257.9,137,0.8,"grand_rond"],[127.9,238.3,134,0.9,"petit_rond"],[149.4,587.2,175,1,"vaste_intermediaire"],[93.8,316,17,1,"triceps_med"],[306.2,316,163,1,"triceps_med"],[233.9,516.1,158,0.98,"court_adducteur"],[230.1,561.9,1,1,"grand_adducteur"],[314.9,319.4,167,1,"brachial"],[280.9,250.9,151,0.98,"coracobrachial"],[348.6,394.4,164,0.96,"extenseurs_radiaux_carpe"],[348.1,440.3,159,0.95,"flechisseurs_doigts"],[344.8,404,166,0.94,"flechisseurs_doigts"],[360.2,431.5,155,0.92,"flechisseurs_doigts"],[239.6,470.7,80,0.83,"pelvi_trochanteriens"],[239.1,462.6,106,0.89,"pelvi_trochanteriens"],[254.4,436.8,163,1,"petit_fessier"],[245.3,437.8,3,0.99,"ilio_psoas"],[257.3,237.3,50,0.92,"sous_epineux"],[221.5,188.2,162,0.91,"elevateur_scapula"],[215.3,315.1,5,1,"erecteurs"],[233.9,476,85,0.95,"pelvi_trochanteriens"],[224.3,468.3,85,0.61,"pelvi_trochanteriens"],[250.1,251.2,8,0.86,"petit_pectoral"],[233.4,448.8,119,0.95,"piriforme"],[238.7,688.4,23,0.97,"poplite"],[222.4,399.1,166,1,"ilio_psoas"],[243.4,484.6,70,1,"pelvi_trochanteriens"],[215.3,235.9,151,1,"rhomboides"],[214.8,212.5,146,0.99,"rhomboides"],[253.9,265,166,0.99,"dentele_anterieur"],[237.7,742.3,8,1,"soleaire"],[201.9,295.6,180,0.99,"erecteurs"],[209.1,182.4,16,0.95,"splenius"],[337.8,366,163,0.95,"supinateur"],[265.9,215.9,81,0.85,"sus_epineux"],[264.9,258.3,43,0.8,"grand_rond"],[272.1,238.3,46,0.9,"petit_rond"],[250.6,587.2,5,1,"vaste_intermediaire"],[151.3,626.8,2,1,"bf_court"],[248.7,627.7,178,1,"bf_court"],[163.2,509.9,38,0.96,"grand_adducteur"],[47.3,444.9,18,0.94,"flechisseurs_doigts"],[175.7,210.6,16,0.91,"erecteurs"],[166.6,268.8,179,0.99,"erecteurs"],[183.8,175.8,172,0.98,"erecteurs"],[192.4,218.7,171,0.93,"splenius"],[148.9,237.3,135,0.78,"sous_scapulaire"],[162.8,810.5,176,0.99,"tibial_posterieur"],[236.3,509.4,142,0.96,"grand_adducteur"],[352.7,444.9,162,0.94,"flechisseurs_doigts"],[224.3,210.6,164,0.91,"erecteurs"],[233.4,268.8,1,0.99,"erecteurs"],[216.2,176.7,8,0.98,"erecteurs"],[207.6,218.7,9,0.93,"splenius"],[250.6,237.3,45,0.78,"sous_scapulaire"],[237.2,811,4,0.99,"tibial_posterieur"],[199,190.6,1,0.96,"erecteurs"],[63.1,372.8,40,0.98,"rond_pronateur"],[337,373.2,140,0.98,"rond_pronateur"],[185.7,201.1,2,0.93,"erecteurs"],[214.3,202,178,0.93,"erecteurs"]]},"lum":{"m-face-sup":"zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcTEzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NxsLHwL/Fzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NxsjMwaKQv8jNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcLK0rijd6C6zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Exa+XgUuhwc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NwMiXrKGcu73Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcTBkcrIscXAzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Fx7/IxL+/yc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzL7CzMC2vc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3GycnJwb7Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nwca5mLvCzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcLPxcKxvM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzca917zEp7vFzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3MvsO9tuTIxpe8t8LDzM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nv7vHusnJx87nyceZwL2/xrHBvb3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NxNXX1s3W28vMycTJyMm3o7auq6yosszNzc3Nzc3Nzc3Nzc3Nzc3Nw9/T4tLd2NLe38e/zMKmp6yTm6SJnm66zc3Nzc3Nzc3Nzc3Nzc3NzcfS3M/K0eXp5eDQvMi2pZaMkqCohH1qls3Nzc3Nzc3Nzc3Nzc3Nzc3Exre/w+Dr7ObbxK7Itamkm3tMfppQlofNzc3Nzc3Nzc3Nzc3Nzc3NvsO0wsHd9O3i0ru0yL2zqpRsKYzBqZOuzc3Nzc3Nzc3Nzc3Nzc3NzcHNwHm71uPs2Mytrcu+s6uHUGXFp7yju83Nzc3Nzc3Nzc3Nzc3NzcnHwr9Rtczi3b+sjb3Fr6SdgkaqxaitjrLHzc3Nzc3Nzc3Nzc3Nzc3DybqeQ7XIycOzkZPIyL2Zh2h8rL6ylqWHxM3Nzc3Nzc3Nzc3Nzc3NxLC8ZVTDxcnIqJevxMi+tZWoer7BuYq0cbfNzc3Nzc3Nzc3Nzc3NzcSgq0aYzMDByceukbK9o6m4V5u3zcCZq4Ofzc3Nzc3Nzc3Nzc3NzcjDoJyixs2wmcHCmH2rrJCXrp5Jks3FwKqgl8TNzc3Nzc3Nzc3Nzc3AyKbCtczNspCpsX5pqq6RaXhkC5DNzb/Gubi8zc3Nzc3Nzc3Nzc3L0sa1uMXNzbaXp6iajKWpmWVdVw+Yzc3GvcbIu8PNzc3Nzc3Nzc3M1crDxrnNzc2/jqOmkGmcn3E7TVUYsM3NzcHKyq+hzc3Nzc3Nzc3NxuzAysm/zc3NwIWal2RPnqZHF0tRJLrNzc3Dysm4jr7Nzc3Nzc3NzcflucnGts3NzcaQmKGkmaabfEJSTki+zc3Nw8nKvoK2zc3Nzc3Nzc3Kyr/Lw8XNzc3NpqWpk12bnFggTE9hy83NzcjDy7p5oc3Nzc3Nzc3MxMHMyLXNzc3Nya6roIRmoKFXIVJRY8nNzc3NvMq/hovMzc3Nzc3NzcLLyMfDzc3Nzb62tayxjqemjjdcUDCzzc3NzcHJwKGLy83Nzc3NzcbGyMO9zM3Nzc29trqppHaeqX0iW1UYkczNzc3Mv8m9m8XNzc3Nzc3CxMbFxM3Nzc3Gxqu3oZBtjqxrI2pWHqbAzc3NzcbIyLi+zc3Nzc3NxszJws3Nzc3NwsKqiKuFaYevVSiOMUa5vs3Nzc3NxczJxs3Nzc3NzcLNxMrNzc3Nzca1v3+jhl2GpyY3gjeypLPNzc3NzcnHy8HNzc3NzcnFzMPNzc3Nzc2+pL6qf6ZYiJ4ZiFavwZCTzc3Nzc3Nw8rGyM3NzcnBycbDzc3Nzc3Nt6q5kLm3ZpGXQLC2n6aIiM3Nzc3NzcXIzMfJzczEw8PJw83Nzc3Nzam2tZzCxcTAv8C3u4ymrInNzc3Nzc3DyrvIxMzEvMXJzMPNzc3Nzc27wcK8xMLFxcXEepCoq5apzc3Nzc3N0cayx7jFv8TLwsjFzc3Nzc3NwLO9ubK1xr7CxYFYtqltqs3Nzc3NzcbBx8fFu83Avrq3zc3Nzc3Nzb20rMGiura6v7OmdsKTbqPNzc3Nzc3Nub3Bxc3Ex7u2uM3Nzc3Nzc23taG4vK6ktb2vkL/ClWaHzM3Nzc3Nzby+vcfBxcXBvcPNzc3Nzc3NubSbp7uShbXAsXWzwpplf8zNzc3Nzc3JwcXFw83Nzc3Nzc3Nzc3NzLavlpKqkYSwv7WOu8CTXofNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc28sJCErJehq8DHrba5jFqWzM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Fxq2PhLKPqaq9r7i5sYJOpMXNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nwb6liZKwmYWeuq+8yLF4VqfBzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcG5qoShk3ybqby+u8C1b2Z9ws3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3CrraFpXZ2fZK2wLu4s2eFasXNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzKvBiKVwa3GXtrHCsK1mm23Kzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2xuZancz++q7rJuZiod4h/zM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NtqKrqngsu7TAyqmRpJBVnM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcGWuq9+JKu9v8ifjaKkRLrNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Jm7SzhB6buce+loSjoF7Gzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nza2ltIcYnK/DvIR3qYCTzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3BpbyTJbS+yMR4hLCEvs3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Ny7umtGi4wcPEsrCksczNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzcy3v62KqsTJuLezuLfNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nwsq2oLnMzL6oyMa9zM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzb7InsHEzc3JyMXGtczNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2+xq6vrszNvsC+ubbMzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Mv8GPsHDCxb26rLy+zM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NwsC3i5w6vcG6sKumosLNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcG9s32SIrfAr56zlY+6zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Cuq2Kpy60v6Oos4yKts3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NwbqffLiLvcKswLeOlcDNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzcy8o4KUoMHDuqijjaDIzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NvaCTgZ7MzKOctYipzM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzb2vtqi9zc3AtsCPuc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3DxMSzws3Nxb/JvL/Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NwMjFsMvNzc25ycW6zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcLGxrLMzc3NvcfGwc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Cx7mxzc3NzarDxLfNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NyMTFtM3Nzc2uyMLIzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3BwrPNzc3Nvse3zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nv72yyM3NxcXCus3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NxMjJxbbNzcLJy8nGzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NwsHJxrvIzc3JxcrKwcjNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NxbbJyMe1zM3Nzb/Jzcq8wc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NyMPAw8fExc3Nzc3HxcnEwMPNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3N","m-face-prof":"zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcTEzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NxsLHwL/Fzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NxsjMwaKQv8jNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcLK0rijd6C6zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Exa+XgUuhwc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NwMiXrKGcu73Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcTBkcrIscXAzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3GxL/IxL++yc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcTAzMC1w83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3CyMnJucnNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzLu5l7TNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Cx8W6zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3DyMnGxsTNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3MwsfKyMbAzM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcnAvsTAw8XEyMbEw8LAyLq4yc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcnDwMa+x8jLyMjIxbzFxMHExMLJzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc29tLfAycrLy8rMr8e9usTHxriPwc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NwZa/wdrOzc3Jzb/HxMS1r8SykbzNzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbGzqMHaz83JysK9xsW8opjEk7Kvzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcWysZ+818/My8vAuMTEuMOsxaSMrcnNzc3Nzc3Nzc3Nzc3Nzc3Nzc3GxZm4z87Iy8XGv7XAt8TGup+4ksHCzc3Nzc3Nzc3Nzc3Nzc3Nzc3EtL60ycHOzMzHy8u+ybaovruGyb/Eqb/Nzc3Nzc3Nzc3Nzc3Nzc3JtZHCns3KyMzNysjCxMfFxL+qosm6yI+hx83Nzc3Nzc3Nzc3Nzc3Nw4eKw7DNwsnLxcjEyMe5xbbDusDJvsiGkr3Nzc3Nzc3Nzc3Nzc3Nza9yobq7zcLAycnBw8TDwL/BubK6zMDIfpKrzc3Nzc3Nzc3Nzc3NzcmVg6XAxc3DwsbFv7e/obXCv7XEu83Jw4aHrcXNzc3Nzc3Nzc3Nzc3ClZCdtczNwsPAx7OrwbiOlsKlr8PNzb6mjbC5zc3Nzc3Nzc3Nzc3NwZqTsMXNzcbEurqpscfDmobCo7nCzc3Gupqqwc3Nzc3Nzc3Nzc3NzcCzwLjNzc3Cxr6qucfKw8S+vqqzwc3NzcDGsLPNzc3Nzc3Nzc3NzcPKyMPGzc3NzMLDv7nKycORwcS0uczNzc3IwbvCw83Nzc3Nzc3Nzc3F0MS9zc3Nzc3Dtb/BvsfDdrfGwsPNzc3Nzb21t77Nzc3Nzc3Nzc3MycvOvM3Nzc3Nzc3MxL7GvHh+zM3Nzc3Nzc3Ct8S5zM3Nzc3Nzc3Nw8zPrMfNzc3Nzc3NwMunxsSJWr/Nzc3Nzc3NybzGxsDNzc3Nzc3NzcHQw6XNzc3Nzci/u8C9lsXDl1q1w8XGzc3Nzc2/vr2+zc3Nzc3Nzc3Bz7DBzc3NzczAi3HDmq/Eu7d2srTLws3Nzc3Nwb3Jvc3Nzc3Nzc3Mxs6xzc3Nzc3Nw3lyu5fAx8G+qKPA1cHNzc3Nzc2+xrzMzc3Nzc3Nwc3HxM3Nzc3Nzb6biKemfbCmcr20zc+9zc3Nzc3NycjHvM3Nzc3NzcXNwM3Nzc3Nzc27roHDvJutrY25yse9uc3Nzc3Nzc3Dy8LNzc3NzcjBzMHNzc3Nzc3Nt7h/xZaswb6xq8upvbTNzc3Nzc3Nw8q7x83Nzc2+yMfGzc3Nzc3NzbymjsPDwMHDxcXJgrm1zc3Nzc3NzcbJycLNzczFxrjBzM3Nzc3Nzcy6wpXBwcXDwbaowXy+scvNzc3Nzc3Nw8nMw8zEv8O7xM3Nzc3Nzc3Bpoi2wLfIuMS/l7+sd4HBzc3Nzc3NzcTAyr/Ev8PLxMDNzc3Nzc3NzbGms8TBwLLEwbXFwKWmzM3Nzc3Nzc3IwMvBu82/vru4zc3Nzc3Nzc3Dv7y9nprBxa+Pt8KzwM3Nzc3Nzc3NuLvBxc3EyLu2uM3Nzc3Nzc3NwsLBuZGuuby9jJi2pLvNzc3Nzc3Nzby+vcfBxcXBvcPNzc3Nzc3NzcG9xpmsgqnAp6hXsJK4zc3Nzc3Nzc3JwcXFw83Nzc3Nzc3Nzc3Nzc3Es8KXwXqmwJevW7pxss3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NwLC9rrlnqcGYkI6+a7bNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcGrtsGuX7O/nWipxFy2zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3EpamqrXO6wqFac8BSss3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NxKSkmKxpvsKrSFa4YLPNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzberprGnesjIqzlwtHGrzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2/rZain4HMza0ycqhktM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NxqmOtpWSzc22M5WaWMLNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2pj6+EtM3Nu1m3jl/Kzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NsZS6k7fNzb2Nw4WGzM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzb2dsbWwzc3HucWEsc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc27ppmws83NybezlrfNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NqquHqbjNzcbAm6aazM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzb20iIW5zc3CvKC0lMzNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc28uqqNvc3NwbW1tJzMzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nv8G7nMHNzcOyu7u8zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcTBe3zDzc3Gl5++v83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc21s1O0zc3NzbKHra3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NtbhxvM3Nzc3Bor2nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbzCgrfNzc3Nw7PFos3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3CxoOVyM3Nyca2s5/Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NxMeDe73NzcHBtruizc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbvIfmGpzc2/srrFsc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2/x39Zpc3Nup2gxbjNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nv8aMZbTNzcGYocOzzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcLIsYLAzc3Dl6HFuc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3FyL2Nws3NxZizxMXNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzL6amcrNzc2LwbbMzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzcy8j6jMzc3Nh8S6zM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nw5+2zc3Nzae+wM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzb6ouM3Nzc27t7zNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2/mq3Nzc3Nu4+zzM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3MuKekzM3NzbijsMzNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcjJws3Nzc3BysfNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcDJxqbLzc3NxMrKvs3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzL3JyMWly83Nzb7HzMu9x83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NyMjGyMjHxc3Nzc3Ix8jKxsfNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3N","m-face-prof2":"zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcTEzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NxsLHwL/Fzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NxsjMwaKQv8jNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcLK0rijd6C6zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Exa+XgUuhwc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NwMiXrKGcu73Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcTBkcrIscXAzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Gwr/HxL++yc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcLAzMG1ws3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3CyMnJucnNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzLu6l7XNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2/xcS2zM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3JxLfFvsLNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NwrO2wcO1zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzcu4v8XDw8W6wbq8xMHDybmyzM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3AyMK1vcnGycfHxsDHurvEx7PMzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Cu69odcLIyMrMr8fHwsWNi7aJwM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NwZK/opLJycvJzb/GxrzHm4u+kr3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbKvzb3DysjIy8K9x8fEvMK6zbawzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzca0xs3JyMjFy8nBuMS9qZ69yc3GrMrNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Brc3NxcbKzMvIv7XAs7u3tMzNzbG+zc3Nzc3Nzc3Nzc3Nzc3Nzc3NsL3NzcPHxMbKx8u+ybaTi7u+zc2/rc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzb/Fzc3DwcjMysLCxMfFxLSrxc3NyajMzc3Nzc3Nzc3Nzc3Nzc3NzcS6zM3NxMnIyMnEyca5xbKbur7Nzc2ywc3Nzc3Nzc3Nzc3Nzc3Nzc3Aus3Nzb7DwsTAxMbBvr7Bq8G5zc3Nt63Nzc3Nzc3Nzc3Nzc3Nzc3JuL/Nzc3Hw8bIwsDHv729v7e+tc3NzcKhxM3Nzc3Nzc3Nzc3Nzc3NzJ/Ezc3Nybu/vsjDy8e+w8SnorvNzc3FjqDNzc3Nzc3Nzc3Nzc3NxcCbx83NzcO3pba9vcfCucLKwb3Azc3NyZuixc3Nzc3Nzc3Nzc3NzbyzsLvNzc3JvL+4vsDKtri+yryoyM3NzcK3tbzNzc3Nzc3Nzc3Nzc3Hw73Jzc3Nzbi/tsnAyr3BycfIvMzNzc3Jv8DFzc3Nzc3Nzc3Nzc3KxbvMzc3Nzc3CtcbNvsest83FvMPNzc3NzczBwMnNzc3Nzc3Nzc3Nycm3zc3Nzc3Nzc3NzL6xkbvMzc3Nzc3Nzc3Nw8S/zc3Nzc3Nzc3NzcG9ts3Nzc3Nzc3Nzc3Cx8K/zM3Nzc3Nzc3NzcLHw83Nzc3Nzc3NzcXMo7zNzc3NzcaYmbfGwamkv7/HysrGzc3Nzc3Gw8HEzc3Nzc3Nzc3GzZzJzc3Nzc2tOVBno76+rLe2w7zAxM3Nzc3NzMG7vs3Nzc3Nzc3Nw7+5zc3Nzc3NtD1CcLu8tKm8xL6uvb7Nzc3Nzc3Cvr7Nzc3Nzc3NycC9yc3Nzc3NzbxJQHmzf3Joer3AucW/zc3Nzc3NycTEx83Nzc3NzcS+vszNzc3Nzc3LgEl2s4Vyh5O8wsvBzM3Nzc3Nzc3ExsLNzc3Nzcm1yb7Nzc3Nzc3NzbyDmsCunZm2wszAv83Nzc3Nzc3Nwsuky83NzczDyMfGzc3Nzc3Nzc3GxLfCxbG2yMKjr8PNzc3Nzc3NzcbKv8LNzczAwMi9zM3Nzc3NzczDupG+vsTCwLeks3GmvszNzc3Nzc3MvsDCvszDwry3sM3Nzc3Nzc3Bp31/rp+9rr2+lJ16ZYPBzc3Nzc3Nzay5uMTEv8a+vrrNzc3Nzc3Nza50pb61xcTCwJ66u3yUzM3Nzc3Nzc27vrfEu83Bube0zc3Nzc3Nzc3EiK/IwcXNzce1xcCLs83Nzc3Nzc3NvLi9w83Fx7q2uM3Nzc3Nzc3Nw6Cws8HNzc3NvIe5osDNzc3Nzc3Nzb3AvcjExcXAvcPNzc3Nzc3NzcmlwbfNzc3NzcycrZLHzc3Nzc3Nzc3JwsXFw83Nzc3Nzc3Nzc3Nzc3NqrvJzc3Nzc3NycGkzM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbKkzc3Nzc3Nzc2/o8zNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc29nc3Nzc3Nzc3NtqPNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NwKHMzc3Nzc3Nzam3zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcCYys3Nzc3Nzc2mrs3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3EqL3Nzc3Nzc3Bo6rNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NwKnAzc3Nzc3Nxqm3zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcKcts3Nzc3NzcKXws3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NoarNzc3Nzc2/hMrNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzJ+TzM3Nzc3Ns5PLzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2plsvNzc3NzKyZzM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nq4e/zc3NzcGmls3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzKd8oszNzc29lpDJzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcOoh3G7zc3AvJ2Rus3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2/uat+vM3Nvqm1qr/Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NxsK5ncHNzcOyuLLDzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcG1XnvDzc3Gl4Seu83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc29s0+wzc3NzbOHqsPNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nt7hww83Nzc3Fnri/zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbjBdMzNzc3NzazDtc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc28xYPNzc3Nzc2srq7Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NwceGzc3Nzc3Nrbaxzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcLIhs3Nzc3Nza/Frs3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Bx4TNzc3Nzc2vxLfNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NwMd/zM3Nzc3Nr8XBzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcTHm83Nzc3NzbHDxc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nx6/Mzc3Nzc2/tszNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzciyzM3Nzc3MucDNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3DsMzNzc3NzLi/zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nw6fKzc3Nzc3AwM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzb2nvc3Nzc3Bt7nNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2/nLTNzc3Nv4+zzM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3MuKejzM3NzLejsMzNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcjJuszNzc3AysfNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcHJxrzMzc3NxcrKv83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzL7JxcCBy83Nzb3Fycu+x83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NyMjExMPGxc3Nzc3Ix8TFxcfNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3N","m-dos-sup":"zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzMTAzM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nway9wsHEzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nxoh9rsvRyMbNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbpHe7nHwcO4zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc26VbObnLq/us3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NvKVQWmdwtrzNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcOSPD1PWKq/zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3IvaeykaO9xM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbxcXE92vs3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc26Q1tdfcHNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nvkh8oqO+zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbJWlrvKvM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcWXc6fHzcLEzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3MwL24nLXExcbJxcLCzM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3MvrrCp6ybm6auu7G3ydPV0r7DvLzNzc3Nzc3Nzc3Nzc3Nzc3Nzc3NwLOouMS9u8HAt7ixv8jKxcjDwMfMvM3Nzc3Nzc3Nzc3Nzc3Nzc3Nwa1ngZivxp9+dIqmkIeirbG8ssTJu8m9zc3Nzc3Nzc3Nzc3Nzc3Nzb1uTWx5nbSahmFqmoVofZu4vXOPvM7KvM3Nzc3Nzc3Nzc3Nzc3Nzc2/PSU+VbOEqZ6NcpCHZnCKvLm1UHatvsbNzc3Nzc3Nzc3Nzc3Nzc3NuF5ef625pLO0rZCYi2lwjLq+x7iSi7DAzc3Nzc3Nzc3Nzc3Nzc3NzbKqw6m6g6fAq8Orp4pqbZzBu7eAqrzFvc3Nzc3Nzc3Nzc3Nzc3NzchqlLOfvFU4hKW2rqqIZWGjjo2Zd3W9t8DEzc3Nzc3Nzc3Nzc3Nzc2+UrSMo7ZaD1KdmqOfgFVxi4CIpJ9Li8XBwM3Nzc3Nzc3Nzc3Nzc3Npkm5iqLGdw08iJ2ZmntPnXKOh7HATU66uLjNzc3Nzc3Nzc3Nzc3NzYdvpYqtzJANNIShnJ91fJdxln+uy4Ein7S4zc3Nzc3Nzc3Nzc3NzcmRlZOaw82jECWHkLSnhZR1f6iLr828PmS5vcXNzc3Nzc3Nzc3Nzc3CvrOOus3NviwYcJ+zwbp3XIKRjcbNzatQuca/zc3Nzc3Nzc3Nzc3GxcWcu8bNzaJnGVWHlcO5Pjl3kKi1zc3Gp4zKx8XNzc3Nzc3Nzc3NvsjItb3Nzc2bgFM+gYaxiy07dZmws83NzbW1ysS+zc3Nzc3Nzc3NxcDHurnAzc3Ns0OgM3aPsHM+RnS5lrrNzc3AvrPIvb7Nzc3Nzc3NzcK3w7+sxM3NzcU+XWZVhKpqPlKJppLAzc3NvJWvwLe/zc3Nzc3Nzc2/s8KftsXNzc3LYTe1vbKqm6W2sJmgzM3NzcmomLy8wM3Nzc3Nzc3NvJXEj7/Nzc3NyXhTw66muMSXob+3scrNzc3NuXvCoKzMzc3Nzc3Ny7SVurTCzc3Nzb6PscSbtMnFkp/GwMHAzc3NzcCswJm+zc3Nzc3NzcG/pbq4zM3NzcyseJTAqrzJxZ29wcHIvczNzc3MvL2Xw8XNzc3Nzc3BwsPFxc3Nzc3Ec1mwyci9ysSvxLHHs73Bzc3NzcjGs7+8zc3Nzc3NxMLEwc3Nzc3NvXeKea/JuMW9waiqx8azwM3Nzc3NxMK5xM3Nzc3NzbzEv8nNzc3NzbSlI0eFs76tw7uSp7m8xb7Nzc3Nzcm+w77Nzc3NzcjEv8DNzc3Nzc2wPw8hZJHAu7SWhpymrbvAzc3Nzc3NwMDHyc3Nzcm/w63Bzc3Nzc3NoCoPEkVunMSmY36Rkpqwvs3Nzc3NzcKtwMHJzczBvba5us3Nzc3NzYw6DQ8hU3iqXlh0hIeMsq/Nzc3Nzc2xvsHCv8zEt8bIx6HNzc3Nzc2lUA0PEidSdjU+ZnZ/hbS4zc3Nzc3NqMbHx7XCvMLBxcS3zc3Nzc3NuVINDhITKIZ2GU5rc4OytM3Nzc3NzbrAxcbEus3Bvbi5zc3Nzc3NzcBREQ4RLYm9v4QwOFuDsrrNzc3Nzc3MtrvAwM3BwLqzuM3Nzc3Nzc21NSQcbrDHurm/sXtNj7O9zc3Nzc3NzLS4vsbBw8W+vcLNzc3Nzc3MtTJfgai1xMO+taO3nqy4uszNzc3Nzc3HvsPFws3Nzc3Nzc3Nzc3Ny6ZdwXqbtL++vaKmqMPDubbMzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcqRgJlZnrO9truapKi6ub+7zM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Em6Z+UJ2yu7eel6WitsTGw8XNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NwbuPY0mZsbeueJWkm6y8vMrBzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcG8nERElrC1qG6PpJajtbfJwc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3CtJsyQZawuK96i6CPnK7AxsLNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Ny42gIDyWqbmyk4mWgpWivbrMzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc20vhQ3lZS6tJ+KkG6MmcW7zM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NvJgdNJeNuri8kZFzhJm7uM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzb6uLzeenbm/uJSdhn+iw77Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3JwEM9r7G5wKuftJ19p8XFzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzb5dS7uztcKspLmmfLC+zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3EfHHDssPDxbm8vou9w83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzLO4wMW/wcC5xcfAuMzNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzcyhk5G9rcXIraysuLnNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Mj3uAqLbNy6+SobK3zM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzZJ/kZnGzc2ngpuwtMzNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcyHgqGXtc3MhX2Gp7TMzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3KZ32ml7rCxG5zeZq4zM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NwlVwmaGywbFZY3eXucLNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcFVZI+iqcGqLVVylba/zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3CW1WFhKG/qCBWaY2yvs3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NwmxFf3+gv60iWWKGsMDNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcyONnmEoby9NUhcfbHIzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3MpzpdcanJy1g1VXyxzM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbZ9ZG2+zc2cR1ahvc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2zwrm2wc3Nxra3xcHNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NvcWosMzNzcuFkca9zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcHHvazMzc3Nkq3Hw83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2+xse7zc3NzbPFxsXNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NycOyvs3Nzc26xcfJzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzcy1u7vMzc3NvMK5zM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Lr8HLyc3NxcPHvMzNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NvsjGybrNzb/HyMnEzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nw77EqsDJzc3Jvc/CwcfNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nw7XFw5y+zM3NzbrDx8m6wc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NyMG/wsjDxs3Nzc3HxcrDwMPNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3N","m-dos-prof":"zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzMTAzM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nway9wsHEzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nxoh9rsvRyMbNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbpHe7nHwcO4zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc26VbObnLq/us3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NvKVQWmdwtrzNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcOYIjJKWK6/zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3JspuLjpq4xc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbvDvsDGv83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3GtcfHxsLNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzKrDyLzLzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzcywp8u4zM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Dw6PTysPNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3MvcG7zszIzM3NzM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcjBucO+wsTGxs3JzsK5w7e8yc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcmywK7FtMC+xqPVzM3JzcnGzMPJzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3CkHmbt7OvxqyB5s3MycjQ0c3KwM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NwKOSYH+10sGJmN7Ww7TCz8fHwcHNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzbi5oJ1alMexjsLN3tSXr8TEw769zc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcTFxmWPmX7ErbbCysDCpZjD0sDCw8nNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Bvb2xQoevxr/Bx8m6w8K80dG9oMDEzc3Nzc3Nzc3Nzc3Nzc3Nzc3BwZPDyaqAtselsMHJqqfIwri8yIyhw8bNzc3Nzc3Nzc3Nzc3Nzc3IubOJu8tla7qvpaGqs5KjrsOeo8qNh8W0x83Nzc3Nzc3Nzc3Nzc3NvqiQjLPMcz26nqiLtbGCpZzAmqrMo2a2jL/Nzc3Nzc3Nzc3Nzc3NzZqWZ5zEzYlNv6ioiMTBfKelxbGtzbZio7mszc3Nzc3Nzc3Nzc3NzciAa2+oyM2XjLm8sICpx3Svw8irrszIZYu5rsTNzc3Nzc3Nzc3Nzc3EmlWKu83NuqpgYKaupMSgpJW5ur7NzYxjpcS3zc3Nzc3Nzc3Nzc3NwKVno8fNzcedfkSBkrerdXKawau6zc3EXovAxM3Nzc3Nzc3Nzc3NzcCyoLnNzc3Cwp1deaekdGJ5pafEws3NzaKVv8PNzc3Nzc3Nzc3NzcXExcTGzc3NzbbBr5WnrmZWisLHt8zNzc3Jw77DyM3Nzc3Nzc3Nzc3BxsW7zc3Nzc3CvsKrs7Z6V6fCusHNzc3NzbnGxLzNzc3Nzc3Nzc3MtrjCwc3Nzc3Nzc3MpMHEsrmqzMzNzc3Nzc3Axr+9zM3Nzc3Nzc3NwrHEu8nNzc3Nzc3NwImzsr3DtL/Nzc3Nzc3NybrIv8TNzc3Nzc3Nzbe3xb/Nzc3NzcSZmK+itKi2xrjFysPHzc3Nzc3BxMG7zc3Nzc3Nzc29w8XCzc3NzcyPQDJEuK6lvsTLwLujrszNzc3NwMbEu83Nzc3Nzc3MvMS9zc3Nzc3Ns6ivcnvAxMm/vbLGzr3Nzc3Nzc26x8HMzc3Nzc3NwMDDxM3Nzc3Nzbpah612wMnHtZS9pbu8zc3Nzc3NyMS3wc3Nzc3NzcPDvs3Nzc3Nzc2sQna6qbvKyaywvYSruc3Nzc3Nzc29ucXNzc3NzcnCwMHNzc3Nzc3Nq0mXlHenn6zAy8eQpLrNzc3Nzc3NwrzByc3Nzc29yMjGzc3Nzc3Nzbump5CtwZymxcLExbS8zc3Nzc3NzcbFwcLMzczBvcLCzM3Nzc3Nzcy/tsDHyL66uru4zMrBv8zNzc3Nzc3Mwb3KwMzDvbi3vM3Nzc3Nzc3Dr66sxrS/vriPnMSttsLAzc3Nzc3Nzb6xur2/vMK+rMXNzc3Nzc3NzKOIUpu+x8Syq5utb6a5zM3Nzc3Nzc3BvMjCuM3Au7e4zc3Nzc3Nzc22r7a1m6rCxImsrK20vM3Nzc3Nzc3NuLm/wc3Dvrm0ts3Nzc3Nzc3NwLppelaVu7p1hyNUwsHNzc3Nzc3NzLO3vMXCw8S+vcLNzc3Nzc3NzbekVXpgi8exbJI7Q7C9zc3Nzc3Nzc3HvsPFws3Nzc3Nzc3Nzc3Nzc2wv3KCaYe0tFyJbWbDv83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nu7h+fG+GtLZXhH2QuL7Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbyxinR5iLqyVH6CqLK9zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc25qql2gZHBrlh3ibyww83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nupuuc4agv8JWb47AssTNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbW7pH6NoMjIaWKXpMa2zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2+vqaFkqLMzXZOmJrGuM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nw7uVlpKvzc2UO5uMyMHNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzcu0j52DuM3NtlKWf8fNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nu4bDgL3NzbCdvXbAzM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzaiGx7HGzc2nsbd0u83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2Ukra1zc3Ns7XAcb7Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nnqqft83NzcC7sJy4zM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzanCs7bEzc3Dxb/Cqc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2ysrCdvs3Nvqe0wbHMzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NvMe1wcLNzcm/r8fAzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcPHtZ/Dzc3FpKzGx83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2wvsS9zc3Nzbu8sbrNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NrKjHtc3Nzc24vpa+zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzaeVxLnNzc3NvLJ+vs3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2LjLfByM3NyLCSebjNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NhoapysLNzbe1bHS4zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzaB/oMO4zc22pllzuM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2ydJqwuM3NsFJVd7vNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NrnKVsLzNzb1LV3/Bzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcGElLC+zc26SFiOwc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3GiZW0wc3Nwz9ZmsTNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzJyasczNzclTX6fMzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcytmLnMzc3MnHOyzM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3LqqG+zc3NzbeTwMzNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzKmxvc3Nzc28q7XMzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcypvrvNzc3NuZ6pzM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3LssC7zc3Nzb2yvczNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzLe5x83Nzcy0w8LNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzb2/lbjNzc3MudLJwM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nw7/IxY6uzc3NzZy6x8rFx83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NyMnJyMfHxs3Nzc3HxcPKxcbNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3N","m-dos-prof2":"zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzMTAzM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nway9wsHEzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nxoh9rsvRyMbNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbpHe7nHwcO4zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc26VbObnLq/us3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NvKVQWmdwtrzNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcOYIjJKWK2/zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3JtZmKjZq3xc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzb+cmqCpwc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Juq+3w8LNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbzGwMDMzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2+xcq6zM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3IwMbGxMfNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NxMW+0s3Azc3NzM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzczCucTDwce7hujQxb+9xLe8zM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcuovqSqr7LJmrrS3s7Jua6twLvNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3BdKGIPIqtxcOc383IybB2oY+Xvc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NuJC6mi17xb28qN/Orcy5qrO5ncLNzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbK4zb9dlLvIxsTMy8jIxL3Eza29zc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcW6x83IkqGrycK6ycnGwsO7yc3FuMrNzc3Nzc3Nzc3Nzc3Nzc3Nzc3AvM3NyL22rLe9q7O/mbLFwcXNzarDzc3Nzc3Nzc3Nzc3Nzc3Nzc3NusPNzcLCscTEube+ysbEysTFzc28s83Nzc3Nzc3Nzc3Nzc3Nzc3NzL7Fzc3BwcOjycCowMjEq8XBwM3NyKjNzc3Nzc3Nzc3Nzc3Nzc3NzcK9zc3Nv6m7jbzCwsPBqo7DwMHNzc2yxc3Nzc3Nzc3Nzc3Nzc3Nzc25vs3NzcDDuJHEx8a1w8CQv7+8zc3NsrrNzc3Nzc3Nzc3Nzc3Nzc3JqMTNzc3Cwb+ox7fGx7qzscW/xM3Nzbmhyc3Nzc3Nzc3Nzc3Nzc3NuJnFzc3NvbibvcfExsm+xcLDwsPNzc3Eb67Nzc3Nzc3Nzc3Nzc3Nw5x6yc3NzcOet8DEusfJtsK+vbjCzc3Nxm2QxM3Nzc3Nzc3Nzc3Nzbe0o77Nzc3JwbHBwb3GycG/wMO2yc3Nzbu3tb7Nzc3Nzc3Nzc3Nzc23sr3Jzc3Nzbe7v8fHyMjAycLFus3Nzc3JurSwzc3Nzc3Nzc3Nzc3JtrrLzc3Nzc3Bu8HNuMbGvs3EvsHNzc3NzczAuMjNzc3Nzc3Nzc3Nw8DAzc3Nzc3Nzc3NzbzIx73Mzc3Nzc3Nzc3NvcPCzc3Nzc3Nzc3NzcXIvs3Nzc3Nzc3NzcnDw8fAzc3Nzc3Nzc3Nzb3Kws3Nzc3Nzc3NzcHHxsLNzc3NzcSal7bCwsjJxMLHycTIzc3Nzc3BxsbGzc3Nzc3Nzc3FxcDIzc3NzcyRKCI/rMHFybvFwLamtMzNzc3NzMHFw83Nzc3Nzc3Nw8XCzc3Nzc3NpSMfMHO5usW3vJ6XibbNzc3Nzc3AxcHNzc3Nzc3Nyb/Dxc3Nzc3NzcNMHiFruI3GpZOKh5TCzc3Nzc3Nyb7Axs3Nzc3NzcPCv83Nzc3Nzc3MkCNApsCrxLSnkp6zzM3Nzc3Nzc28u8PNzc3Nzc2nusPNzc3Nzc3Nzb5Xk8StnKm7w8fIwM3Nzc3Nzc3NwrGuy83NzczExcbJzc3Nzc3Nzc3Fk3jBxJymx73LycHNzc3Nzc3NzcXHxMLNzcy6v8PEzc3Nzc3NzczBrY+Zvb25urimvai8w8zNzc3Nzc3Mt8K/u8zCwbqyp8zNzc3Nzc3Diamdsb69w7S9rLaAhKvAzc3Nzc3NzKe0usG/vMW5urzNzc3Nzc3NzJCIvrqzx8XBpJTBqWmtzM3Nzc3NzcyttrfFuM29uLOzzc3Nzc3Nzc2yYsHHwMTNzcrCx7duvM3Nzc3Nzc3Ms7W2vc3Cxbm0ts3Nzc3Nzc3Nwme7usLNzc3Nv5m0ecbNzc3Nzc3NzLS3vMbBw8W+vcLNzc3Nzc3NzceDvrzNzc3NzcyWmZjIzc3Nzc3Nzc3HvsPFws3Nzc3Nzc3Nzc3Nzc3MrsLKzc3Nzc3Nyby0zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzaO9zc3Nzc3Nzc2rq83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2Zss3Nzc3Nzc3NorXNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NuJXMzc3Nzc3NzKG6zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbKYzM3Nzc3Nzcqcv83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc21nb7Nzc3Nzc3Cnr7Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nv6/Ezc3Nzc3Nvpu6zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcOivc3Nzc3NzbWOwc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Kg77Nzc3Nzc2plszNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzJWzzc3Nzc3NkpzNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzcyer83Nzc3Ny46hzM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Noq7Dzc3NzcKNn83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Ny6ipts3Nzcy4larMzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcPJmK/Czc3Ax5ufxM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3CsqaVvs3NvqKglsjNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NxLW6v8PNzcm/ubfGzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nza2vOJLEzc3Fj1i2ws3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2nu3a4zc3NzbNZwr/Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nsbe8xs3Nzc3Ekr7Gzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzbu+tszNzc3NzayZxs3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2/pL3Nzc3Nzc2xeMbNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nu5W9zc3Nzc3Ns3nAzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzb2Pvs3Nzc3NzbSYws3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2/lL7Nzc3Nzc25xL/Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nwaq7zc3Nzc3NvcbAzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzcmvvc3Nzc3NzbPHxM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NpbnMzc3Nzc2dyc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzb62zc3Nzc3MqcfNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2+u8zNzc3NzKutzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3MssnNzc3Nzcy6u83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzKjBw83Nzc3Du7HNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcyotsPNzc3Nw6y3zM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3MssC5zM3NzK+1vszNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzLm6t8vNzcuxwsLNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzb7Alb/Nzc3NwdLJwM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nw8DJwo6qzM3NzZ24xMrFx83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NyMnHxcPGxs3Nzc3HxcXExcbNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3N","f-face-sup":"zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzczNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Ny8DAvMDKzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NyMfLwaKkwsnNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcDL1LykeKrHzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3ByLKZg0mnv83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nu7ymraKWqL/Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcTGrMrIscXFzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NyMXJxL67zM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcLGzMO4vc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3AycnFxMHNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NxcnCs7S6zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcXPxsWvws3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc262sHEsLfNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzLzBvd/JxY6yvMPMzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcO6w8HJycfcycelxbPIury8wc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcXR19XM3NPLy8jHycetqbCstK6/zc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcrQ1N7N2tLZ4s3BzL2lp5GVroqwiMXNzc3Nzc3Nzc3Nzc3Nzc3Nzc3D1NbLy9fo5uLUv8e0n5CKlqmHjHGxzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nwsq1wszj7OvfyrLHs6ihjVt4qGeKrM3Nzc3Nzc3Nzc3Nzc3Nzc3NzcHItcLH5/Do2MC5x7yxo4M7cMKpub7Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3GzsR3xdvp4s+2tMu8sqBtRrutv6bEzc3Nzc3Nzc3Nzc3Nzc3Nzc3MxsS5VsDR5cuxmr/IrqKWZYHDsrCPsszNzc3Nzc3Nzc3Nzc3Nzc3Nw8m7lVjByce5nZnHyLOTel+owLeXpJLDzc3Nzc3Nzc3Nzc3Nzc3NzcS0uVdzvsjKupS4xcjDqJ2UqcS6jLN6vs3Nzc3Nzc3Nzc3Nzc3Nzc3Bo6RIr8XFyMq8lbLAor2efLnExpyph7zNzc3Nzc3Nzc3Nzc3Nzc3MwquUrsfNsqjDq4Kpr5Kfr2SQzcm+oaqxys3Nzc3Nzc3Nzc3Nzc3NwsmzwrzNzayKs5Fmr7SLWpQRfM3NvsS3vsDNzc3Nzc3Nzc3Nzc3NyszHv7zIzc2tkKmZlqGikVJqEIDNzcjAxsm6yM3Nzc3Nzc3Nzc3NzcnKxse/zc3NsomllHKZmGYrfQ6Uzc3NxMrLr7LNzc3Nzc3Nzc3NzczayMrHwc3Nzbx9nnBUnpc8GXQXqs3NzcDKyrWWyc3Nzc3Nzc3Nzc3B4b/KwsXNzc3Ah6qhnaqXazZoKrrNzc3FyMq+hr3Nzc3Nzc3Nzc3Nwc/Ayr3Nzc3NwaK4mG2cnUwXbTW8zc3NzcDLwX2vzc3Nzc3Nzc3NzcnGy8jAzc3NzcCks4loo6RNIW04pc3Nzc3AyMaPks3Nzc3Nzc3Nzc28zcm8yM3NzcO4tbCvj6iujCpZO1G9zc3Nyb7DsZTMzc3Nzc3Nzc3JycrGwc3Nzcm9trmlpXSfqYEiSF0bh8fNzc3ByrydzM3Nzc3Nzc3NwMvFwsnNzc3Eva27k49lkK1sF0tlHHW6zc3NycbIxb/Nzc3Nzc3NzcfLyMLNzc3NwMWUjp2FYIivTRNzThuor8zNzc3FzMrCzc3Nzc3Nzc3Ey8TMzc3NzLjDtHqifFaKpiwioTeTwpLMzc3NzcjLw83Nzc3Nzc3HxMnDzc3NzcG5sruwjZ1PiaAaanOkuq1yws3Nzc3Dy8bFzc3Nzc3HxcnGws3Nzc3Fs6q6nbqxSZCWNZuwnbWPcMLNzc3NwcvMw8nNzc3Nw8LBybzNzc3NzavAt6PExsTAwMC3wJymspHMzc3NzcHJvcfFzc3NxsDKu8u6zc3Nzc27wL2uxMPGxcXGe4jBt6O0zM3Nzc2/ybTIv8XNzb/Ex8PEws3Nzc3NvrDAt7uvxb/Dv45Sn7dwpczNzc3Nx8nJyMbAzc3MwcTBvczNzc3Nzbuysbuetq67v7CqhLqhcZTMzc3Nzcy5w8PIzc3NwcfBvLnNzc3Nzc24tZ7EsqWrtcG1hLLHmm59y83Nzc3Nt727yMfNzcrDw8HFzc3Nzc3NubSWrq+LuLW9wW2vxKBqg83Nzc3NzcXAy8PFzc3Nzc3Nzc3Nzc3NzbiukpuvhLGxwb6GvcOYYofMzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzcy3r46Gnoa2ur6wqKy5jlmXzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NwK6QgrCWhq69oLG4sIFQoMvNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzLqsjIaxmIeou7e+yK11WJ7Mzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzcy1sImQjoutlrjCwL2rZ26JzM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Ns7eMkH16fYaws8GyoVqJf8zNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzbe3mZR/XJB/rr2+qppnf5PNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2/ra2YjDmfk7DJsJqPkVquzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nw6G7lpc0naS5x6KZhKdOwc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzcyir6eiNnevwL+RoY6MbsnNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Ns5m5rDZktcK0iaCwY6PNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcGWs7MsZLW/qXuor1y9zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Mqrm8N4S8xLJps7Z4zM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzby3pmucvsLFq6Svsc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2/yKKfoMLIs7WnxLjNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nv8nBsb3CwsC4xsm7zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcLLpa3DzMzGyMPGws3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2/yaqrvMLFw73CtrzNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NvcaArnu1wby6sMG1zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzb+7iLdErcC2tLqat83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2+sYavLKq4r6+4crfNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NvqmQwT2juaS8t2i5zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcGvirp1tMCwxrp6uc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Csox3rbvAwLO+frvNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nv7Skh7rExcOrwYq6zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzb63rau3zc24sMaMvs3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3DxcPCvs3Nw8TJusDNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NwcjEwb3NzcHGycGzzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcXHxbrIzc3JvsnEvs3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nwca0y83NzLfJwMzNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzb/HuMzNzcy+yMDNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3AybvJzc3Jxcm4zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NxMmuwc3NwrvJwc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NxMbEw8vNzcvJyMXJzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nx7/JyMXCzc3CycvJwMTNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nwr3Iysa8yM3NycfKzMu8yM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzb6+v8bFwc3Nzc3CxMe/wMPNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3N","f-face-prof":"zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzczNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Ny8DAvMDKzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NyMfLwaKkwsnNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcDL1LykeKrHzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3ByLKZg0mnv83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nu7ymraKWqL/Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcTGrMrIscXFzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NyMXJxL68zM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcTGzMO3ws3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3MxMnFuszNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcDCs7LNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Cyca/zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3MwsnHucvNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NwcfKyMfAzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3JusHEv7/FyMfFxL/DwrrKzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Jw8DGv8rLu8jIusTGxsfDw8nNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nw7C5xcjLzMrMtca+xMPIvI3Dzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcCZwcXWy8zLzcDHv7aow7t/uM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2zvbnG2c7KysO+xsW7lMKkq6LMzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Ir6O4ydnOzMvAuMPFq5bEtI2xws3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NxsOiv87Ny8rIwbvAvMK/qruUwr7Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nx7vBtsfKzM3HysvGybe6xJC+vMWuws3Nzc3Nzc3Nzc3Nzc3Nzc3NybWQtLHGysnNy8jHvsfFxKe7v7uulaPLzc3Nzc3Nzc3Nzc3Nzc3NzcGNiMC5wcrKycnGx8a9xLi7v7zBtoiVvs3Nzc3Nzc3Nzc3Nzc3Nzc2zeJvAwsXGxsnIxMfCxMS/ubjDxcaEj7XNzc3Nzc3Nzc3Nzc3Nzc3MmYmgsszNxcXFxLu+q77Dt8K+zMy+jYGsy83Nzc3Nzc3Nzc3Nzc3NwZSXoLvNzcHExcGuwL2Ws62cwc3Nva6GqsDNzc3Nzc3Nzc3Nzc3NzcOZmLjIzc3Dw8GxqsbDl5u1oMLNzci+m6m4zc3Nzc3Nzc3Nzc3Nzc28sr+9zc3NxcS3s8XJxcO4u6e/zc3Nw8e0uM3Nzc3Nzc3Nzc3Nzc3JwsXByM3NzcXJu7TFyMW0wsPBxc3Nzcm/vMDEzc3Nzc3Nzc3Nzc3Nw9HGvs3Nzc3Nvbm8x8fCg8HFvM3Nzc3NxMC2v83Nzc3Nzc3Nzc3NzcjN0L3Nzc3Nzc3NwcbFxHKjzc3Nzc3NzcG6w7fMzc3Nzc3Nzc3NzcXNz7nMzc3Nzc3MzMSyx8R/dMrNzc3Nzc3Mu8TCvs3Nzc3Nzc3Nzc3D0b+1zc3NzcnAub7AmcbCkmC9wMLLzc3NzcW+xcHNzc3Nzc3Nzc3NxNKvxM3NzcrDi4DJnLbCurR3rrLKw8fNzc3GucO9zc3Nzc3Nzc3NzMbNt83Nzc3JwXR+sae6xsKyrp7A08PIzc3NzcPJvMzNzc3Nzc3NzcPMxcjNzc3Nzbx+mJyoe7GlaL2xzNC8zc3Nzc3Jxsi4zc3Nzc3Nzc3AzL/Nzc3NzcyzkJe/tKGoqYi5ysu8uczNzc3NzcTMxM3Nzc3Nzc3HvsvDzc3Nzc3MsquRx3uqub20oMm4sabMzc3Nzc3Fyq3Fzc3Nzc3NvcjIyc3Nzc3NzYm7mce9wL7BxcLKlLOQzM3Nzc3NysrJxMrNzc3NxMbItczNzc3Nzci2wo2+wcXFwbSlwIG4usPNzc3Nzc2+ysvFzc3NyL3JwLLNzc3Nzc3BlJudv7vFv7vEqauklGe2zc3Nzc3NwsPIv8XNzb/HysS/zc3Nzc3NyKKmu8O8wrTEwqzCv7KExs3Nzc3Nzb3CysXAzc3MwcTAvczNzc3Nzc3Ax7+3mZrHybWOtrrIuM3Nzc3Nzc24wMPIzc3NwcfBvLnNzc3Nzc3Nwr/FrJWeu8KvmIvAsLzNzc3Nzc3Nt727yMfNzcrDw8HFzc3Nzc3NzcK8uo2tjbLApbBQpZG1zc3Nzc3NzcXAy8PFzc3Nzc3Nzc3Nzc3Nzc3AtbKYvWmqwZypZKKBuM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nv6zAubResMCdhZe3dbTNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcmtusGtXba/nmWbvl60zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Bq6utrXG3v6BZdrxsuc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NwbGloK10ucCnQW63bbzNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcWwm6Cobb/CpiyBp2LCzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3MrJKzpYDLzKAnpZRyys3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbKIsZaSzc2iMrJ8d8zNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc25gr+Nm83Nn2zGZZXNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NvovBppTNzaOkx12vzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcafqqeGzc26vL1zws3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc27t5mghc3Nv7KqmrfNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NwLqSlIvNzb25mKezzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzb/GsYefzM2/tbWFtc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2+xpyikczNtLWnpbnNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nyce8srHNzbi4u8C2zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcXGnVi5zc27iZ/DxM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3BxWR/y83NzJ2LxMDNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NwchrpM3Nzc26o8eyzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbrHg7LLzc3MwLPGq83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2xyIuUu83Nw8CzxpfNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NsMiNkKjNzbyls7qdzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbrIjYl/zc3DnLrBsc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3ByIt5e83NtJO6w8DNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NycONeJPNzbeeuLzIzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc28jnmuzc28e7W4zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NvZSSvs3NwoS1vM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzb2eor3NzcKvtLzNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc29qKHIzc3Itbe1zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NwK+0zc3NzbyvqM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbWftMzNzc2/obTNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2+qKrMzc3NuI+jzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NxKywxc3NxbebvM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzL3JwcDNzcHJybvLzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcLJxsHCzc3Cx8vJvs3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NycTDysSayM3NycHIzMfFyc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcXFyMbGws3Nzc3CxcjGyMXNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3N","f-face-prof2":"zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzczNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Ny8DAvMDKzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NyMfLwaKkwsnNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcDL1LykeKrHzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3ByLKZg0mnv83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nu7ymraKWqL/Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcTGrMrIscXFzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NxcXIxb22zM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcTFzcO3wM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3MxMnFuszNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcDCs7LNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3FxsXGzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NvrzHvczNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nxbe2vrO9zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3LrMHFw8LAwMG/wr7Bw7bLzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Jv8a+tcXJwMjHv8LAs8bJpMrNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NxLWxY6zMx8rMtcfHxamQtobAzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcGNvJjAxszLzcDIxcW/qb2Kuc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2yr826x8rHy8K+x8W7w7nNuKPMzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3IpcjNxcrEysq4uMO7pb/Bzcmsv83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NwrXNzb/Hy8zKwbvAtr+wwc3NsrXNzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbbAzc3Ax8TIycvGybWNob7NzcGwzM3Nzc3Nzc3Nzc3Nzc3Nzc3NzcmqyM3NtsDNx8jIvsfFvrK+zc3IosfNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Gqs3NzcLDyMnGyMe9xKSsu83NzbXCzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nu7bNzc3BwsXIxsXBxcS8trvNzc25rMzNzc3Nzc3Nzc3Nzc3Nzc3NyLTDzc3Nv8jDx8DHv8K5ucG4zc3Nw53Czc3Nzc3Nzc3Nzc3Nzc3Nzcmex83Nzb7Cu8TCx8K6x7Kct83NzcmQqc3Nzc3Nzc3Nzc3Nzc3NzcPBnsrNzc3JvbK/vcW4usfIusLNzc3JoZ/Czc3Nzc3Nzc3Nzc3Nzc28t7G+zc3Nw7y5urvKu7rDyabCzc3Nx7Oru83Nzc3Nzc3Nzc3Nzc3NvcG9zM3NzcW+t7zEx8S6xMvFxc3Nzcm/v7vNzc3Nzc3Nzc3Nzc3NycO/zM3Nzc3NtLnLw8K8wc26uM3Nzc3NzMDFyM3Nzc3Nzc3Nzc3NzcfHvM3Nzc3NzczNzcO1p8HNzc3Nzc3Nzc3GxMDNzc3Nzc3Nzc3Nzc3EurvNzc3Nzc3Nzc2/x8S6zc3Nzc3Nzc3NxMXCzM3Nzc3Nzc3Nzc3Bz6rDzc3NzceXlLbGwaqlwb3JxcXMzc3NzcbEvMHNzc3Nzc3Nzc3NwsyozM3NzcqpM1Fusry+rLO2w7/CwsfNzc3NwrzBzc3Nzc3Nzc3NzcO5us3Nzc3JnS5MdrW8tKqzwsCxucLIzc3NzcS+vs3Nzc3Nzc3Nzcm7v8nNzc3NzaAsUH2jgW5mbcLCt8G8zc3Nzc3Iw8XJzc3Nzc3Nzc3FxsTNzc3Nzc3BWlZ7rod7gpS6w8bGxc3Nzc3NzcXMwc3Nzc3Nzc3JscrBzc3Nzc3Nzat9mceplZi7yMq7t83Nzc3Nzc3Fy53Izc3Nzc3Lw8XIyc3Nzc3Nzc3Dw7XExK+zycKtt8PNzc3Nzc3NycfEwcrNzc3Nwbu8rczNzc3NzcfCr4zCv8TEw7mmrm+IvcTNzc3Nzc29w77Bzc3NxsW/uqjLzc3Nzc3BlnKPo6zBub68rYyTZma2zc3Nzc3Ns7m5xsXNzb7Gv8K4zc3Nzc3NyJp2tLO4xMbGvKqrvIx2xs3Nzc3Nzbi/wcfAzc3MwMC7t8zNzc3Nzc22hr3BssjNzcmnvsGjm83Nzc3Nzc22vLvGzc3Nwce/vLXNzc3Nzc3NwqK8sLzNzc3Nvoaro7nNzc3Nzc3Nt769yMfNzcrDw8HFzc3Nzc3NzcOusbjNzc3Nzc2oiqzAzc3Nzc3NzcXAy8PFzc3Nzc3Nzc3Nzc3Nzc3IqLvMzc3Nzc3Ny7uhx83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzayvzc3Nzc3Nzc2/pczNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2+o83Nzc3Nzc3NuqnNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nv6TMzc3Nzc3Nzaizzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcWexM3Nzc3NzcWks83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3CrMHNzc3Nzc3GrL7Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NyaSyzc3Nzc3NvpHHzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2on83Nzc3NzbiazM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nr5fMzc3Nzc2qns3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbeLws3Nzc3FpafNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2/gbLNzc3Nw5ixzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NwH6lzc3Nzb+OsM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzb6DgcPNzce2ha7Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2vnHKXzM26qpOSzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NvZygj8zNq7Wir8zNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzMK5sbHNzbS3tbHLzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcPEf1a5zc27iH+3xM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3JvWF+y83NzJ6KwMjNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzLRrqs3Nzc27orfMzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzcyzgb/Nzc3NwrWwzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NtYbCzc3NzcWzq8zNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzLOHyM3Nzc3Nrp7Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzcy7g8rNzc3NzbOry83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nv4XHzc3Nzc22rM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzb6Lws3Nzc3Bua7Mzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2+jsHNzc3NwLq6zM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NvZbBzc3NzcC4vM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzb2fwc3Nzc3BuL3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc29qLrNzc3Nwbe2zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NwK23zc3NzcCtqc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbSirM3Nzc3CobLNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2+p6zNzc3NvI+jzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NxKyrxc3NxrWbvM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzL7JvsLNzcLGybvLzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcLJxbfLzc3Mv8vJvs3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NycTDycOLys3NzcTFy8jFyc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcXFxcDGws3Nzc3DxcbGyMXNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3N","f-dos-sup":"zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzczNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NybK4vr/Hzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NyKCCr8rRxcXNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzblIeLrIxsO6zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc23R6WjpL68tc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NvJxaXGh8tbzNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcaoOz1PV6vCzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3MsZ2skae0zM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzb5xXk6Vws3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3BZFhblL/Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nw2N3oqrEzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbxukLrKu83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcyxeqLKz77Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzLy7sbfCx8fKwcTMzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcO3v62il6Krtqy2zdPSwMC7ws3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcK8r7rGv8DCvre0wsrJxcTAycrCzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzciza4GbtruIb4imlI2mrMKxxMjMwsXNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Ahkxtfq/ChXBimoVphqPCkX66zMi+zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nv2gmQnqvmqKSdpCGaHWiuMJqb67Bts3Nzc3Nzc3Nzc3Nzc3Nzc3NzcF8Y4y7vZKstZWXiWlwq7jKupuMt8TNzc3Nzc3Nzc3Nzc3Nzc3Nzc2+sMKowYG3tL+xpolpcre9upiXw8bDzc3Nzc3Nzc3Nzc3Nzc3Nzc3MhpquobgwYKSotKqGY3KbjoudZ7m7vszNzc3Nzc3Nzc3Nzc3Nzc3NwmS0kKqzLyiFoqedgFOJe4aUrFKFxMK+zc3Nzc3Nzc3Nzc3Nzc3NzbNYtI6swkcVcaGcnHpZmneLor5jQrW9uc3Nzc3Nzc3Nzc3Nzc3Nzc2jf5SPucZmDmWPqKF2kIWEi6LEoiaTuL3Nzc3Nzc3Nzc3Nzc3Nzc3Mo5iKn8XNhQ1WjbatkJd0k5uozMVjX7m5zM3Nzc3Nzc3Nzc3Nzc3Nwb6vncDNzaMXQJKst7Ndbo2JrszNuWi6yMHNzc3Nzc3Nzc3Nzc3NycPHpL3Jzc2tUSl8kcOxL1SImrTMzciwkcq9x83Nzc3Nzc3Nzc3NzcHIxsDDzc3NkJA0coWwiCxSjrCtzc3NwbnIysLNzc3Nzc3Nzc3Nzcy+x8bGwc3NzZ5ldVaMrnI/UaSgsc3Nzb/Dx8i3y83Nzc3Nzc3Nzc3Dvsa5xcTNzc22O4ZXfapvRmWdjr3Nzc3Fu6++u7zNzc3Nzc3Nzc3Nv7PCp77Nzc3NuDyUvLOun62/sp25zc3Nzb2Qwbi5zc3Nzc3Nzc3Nzb2mxaq/zc3NzapfqbmpxcCVsrW2vs3Nzc3AkMOswc3Nzc3Nzc3Nzc25oMPCyc3NzcO9tsCls8nFkKnGxMPBzc3NyajAnbjMzc3Nzc3Nzc3MvKLExs3Nzcm0e5DArLzJxZ68wrzFxcnNzc27wKHEzc3Nzc3Nzc3NwcHDwsnNzc29XnOmy8e9ycStx7PJu7u7zc3NycLCur3Nzc3Nzc3NzcLBxsDNzc3MqGR8ibTMtMW8v6ykwsuuuMzNzc3Exb7Azc3Nzc3Nzc27xMDMzc3Nyph2JFiPubSmvrOSore5xLzNzc3NzL7Dvc3Nzc3Nzc3Hxca/zc3NzcKVHBAwbZjAtbiRgZikq7fFxc3Nzc3AxMXFzc3Nzc3EucPHv83Nzc3FcRoPF1Bzn7+kX3uOkpamxMLNzc3Nwsa8wMrNzc3Nxci7xLrNzc3Ny3EyDhAqWXurXVZxgYaKoa/Lzc3NzcDGwMXCzM3NwLrFx8Opzc3NzcyGRg0PEyxVdzQ6Y3R+hKOxzc3Nzc2xxMfIvsTNzb6/xMTBsM3Nzc3NjT8NDhITKYl1F0dqcICwq8zNzc3NxL7DxcPBzc3MwsK8t8zNzc3NzYdEDg4RMI6/wIc9M1V3t67Nzc3Nzcytwb7Fzc3NwcO8urfNzc3Nzc2HQxscb7nHucHAuJFHd7WrzM3Nzc3NtLi7xcTNzcHDv8DEzc3Nzc3MhTRqe6uwyMHAuZyrqqu0tszNzc3Nzca8wcPBzc3Nzc3Nzc3Nzc3NzIRWvmqitMLEwqKnob/GuLDMzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcqUgqZcorW8v7yWpaS4yMK1zM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3JkoaIUp+yvLaukqWgtcXCv8zNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Ny6SKa0eYsbOziYGknK29wLnMzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzcyvh1M7kq+qqn1mpJqltb+1zM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NtpNJM46up6WDVKSXn7G4t8zNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbanRyyLq6OzrVelkZiuvbvNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc25lEUkh6invrliqIiSqcO+zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nv5tNIISnpb+1Z6+Ajae7v83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcyoXh+GtKO6qXK5fYuzuMnNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NwIgijsGmu6aPxn6Mur7Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcOjLZ+mr7qsobyQjsXAzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NtEm4rsC9ubu9r5XGzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbulwsO/v7m7yMS8wM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc29n4+mt7+kvqyoxbTNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nu26Nj8HCuK6doMK4zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbxdnIezzMuVkZu/wM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc24YpqcucPDeYSSucDNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NtFyZnrPHtWBwiay1zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbBRi5istrRIYoamvs3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2qRYCgprWkOlqAo7rNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NtTt3hJ+zmS1eeJu3zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzbw4boqat7IiZnCSvc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc24P1+El720LFBfkL7Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nu1tYYJzDxE9HYpq0zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzbeebm6wzc2EZnq8v83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2twbi6v83NvbG8x8LNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NvMWur7nNzcF2qMi5zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcXHvanIzc3HZbjHvc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NvsWtzc3Ny4LGxs3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcDCvszNzcyrxsLNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2tt8rJzc3JxbzLzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nu8LJvc3Nu8e3yM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NxMSxyMDNzb7Jub3Izc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NxbvGpcfBzc3Dx9DKvcbNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NxbfFwqjEyc3NycHHyMq4x83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzb69vsbFx83Nzc3DxMe/wMLNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3N","f-dos-prof":"zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzczNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NybK4vr/Hzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NyKCCr8rRxcXNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzblIeLrIxsO6zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc23R6WjpL68tc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NvJxaXGh8tbzNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcawJTFKWrDCzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3MsJuLj52zzM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcDDwsHGv83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3MvMfHxMnNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzbm5yMLNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc25kszDzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3MvLjOwszNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nw8jIz8zFzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3JvsHDwcTHyMzLy77AvsDJzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Iu8fAurbExK7Ty8vNy8nMxcnNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nu5qBob6ox7yE5crNxc7Py8e8zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzb+kfWaWy8mWkuDOx7TLyMLFvM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc23vqh9cLjGkcDN3cqRvsPEva7Mzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3GxsFXqGuwva+8xrzJka/RxMjJws3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NwbzCpU+yuMfBscbDx7rF1b+/vMbNzc3Nzc3Nzc3Nzc3Nzc3Nzc3NxsKavcGlnMW7p624nrjJuMLJuJbGxM3Nzc3Nzc3Nzc3Nzc3Nzc3Nyruujb6+YIyqupGyvou9s7Okv7d1xrTMzc3Nzc3Nzc3Nzc3Nzc3Nzb+6hZTAu2liocKIxcGBw6aRrLq1Yredwc3Nzc3Nzc3Nzc3Nzc3Nzc22pWejw8VjhbDEfaHEdcOxpqnFxG2evLHNzc3Nzc3Nzc3Nzc3Nzc3Lp3V1qMzMg7C1xH+lxHbEyLqvzc2Hhbmsy83Nzc3Nzc3Nzc3Nzc3Nw7Bek8HNzbOaV5WxssGpoLG7wM3NpmKjxcDNzc3Nzc3Nzc3Nzc3NzcOpa63Jzc23kE5yk7OdaYC6ur3NzciAir69zc3Nzc3Nzc3Nzc3Nzc2+sKLCzc3NvKuGYKGqcmeJv7y9zc3Nv6W9ws3Nzc3Nzc3Nzc3Nzc3JxcbCyc3Nzcm9vo2lrmlgo8fAxc3Nzcm/xcTFzc3Nzc3Nzc3Nzc3NvcS2v83Nzc3Nwb2vqrd7a7a1vM3Nzc3Nw8XFwM3Nzc3Nzc3Nzc3Nzb27w8HNzc3Nzc3NurbDs7vAzc3Nzc3NzbzEw7vMzc3Nzc3Nzc3NzcW0xr/Mzc3Nzc3NyZG3s7rGocvNzc3Nzc3MvsS+wM3Nzc3Nzc3Nzc25t8DBzc3NzcWekq+qu6K3xrrFw7/Lzc3NzcTEwcDNzc3Nzc3Nzc3NvcbExc3NzcmZSjVDuLCjvcHKwL2ns8fNzc3Jwce/zc3Nzc3Nzc3NzL7Dvs3Nzc3Jsaa4XY24wMm8vrfFzsHIzc3NzcLFwczNzc3Nzc3NzcG6wMjNzc3NzI5joYWIv8nHtZiwqrW4zM3Nzc3GwcK9zc3Nzc3Nzc3Bw8HNzc3NzcxzT4qrs67Jy6y9pYOiss3Nzc3Nzb61x83Nzc3Nzc3HwsS/zc3Nzc3Mgl+tjWuerbC3yMy0nbHMzc3Nzc3BxsHHzc3Nzc3MucbHyc3Nzc3NzKS0lo2mwKqnwL3FxsKrzM3Nzc3NycjKwsvNzc3MvsbBvc3Nzc3NzcXEssTIyL25ubm4y8q/xMDNzc3Nzcy4xcbBzM3Nxryxt7rNzc3Nzc26paOox8LDwLaXmMi0rry/zc3Nzc3MlLu8v8HNzb7GwLi+zc3Nzc3NyaKKYKi9x8WwnZ22cpy3yc3Nzc3Ny6q3xcXBzc3MwsG3tczNzc3Nzc2kv7Wzj7DJxnazp7S8uc3Nzc3Nzcyvv8DFzc3NwcK8u7bNzc3Nzc3Nu7hxfVGfu8JumCxAur/Nzc3Nzc3Nsrm6xcPNzcHDwMDEzc3Nzc3Nzb7AYXpbl8G4bZVMM8TEzc3Nzc3Nzca8wcPBzc3Nzc3Nzc3Nzc3Nzc29wW6BaI/Es1WJdVrGv83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NvMB4e2+LwKxPg36MwL3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbS2i3R5iL+qVH6CqbfEzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc27s6V1gZHCqFl4isCtv83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NwZuxc4WfurpccpXGrL3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcSVtn+Knr7CVmqfuLbBzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Lra+Sj6DMy2Ncp526zM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzb2lopCfzc2ES66VvczNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc26lq6GoM3Nl1SXkMjNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NwYy1maDNzY6ul5fBzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbSHvrywzc2WuJucvM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2yjrGywc3NrbeZnrzNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NtJWsqL3NzbGvq6DIzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbaqvKO/zM2/vsK2wM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc24rbCnqc3NqsG5t8DNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NvcS0xbzNzbvCsMfJzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzb/EuKq4zc21qLXExM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3BtMeuy83NzK/FssHNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NwqLHsM3Nzc2zvKG3zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbORtrjMzc3Mup6aus3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2mjqrMxc3NuLF8mLnNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NtYmfxrnNzaiiYpa4zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbeImLrDzc2gil2Tu83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3ChZGmt83Nlkxelb7Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NyIKMpbrNzZw5YJvJzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcyTiau8zc2tNGKhzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nm4qwvs3NrUpkqs3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzaiRubvNzcFobLTNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc28k7/Izc3IioK9zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NtKG+zc3NzJmkwM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzburvM3Nzc2tmLzNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2ZsL/Nzc3NqZfLzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NprTDyc3Nya+zy83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzL24yL7NzcHGxb7Mzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcHFnr/Czc3CxM/Jvc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nyb/Expesyc3NyaHCwsfBys3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcDHyMTGx83Nzc3DxcfGycXNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3N","f-dos-prof2":"zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzczNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NybK4vr/Hzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NyKCCr8rRxcXNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzblIeLrIxsO6zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc23R6WjpL68tc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NvJxaXGh8tbzNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcaxKTFKWrDCzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NsJmLjZu1zM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcWtmqG1v83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Mu7XAxMnNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcDDycHNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc28ycXEzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NvsbKwczNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nxsi9083Hzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NvsLFwL7DjePNwrzAvr7Mzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3LqcGbsK3Is7jR18zAsqi9tszNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NwmSraFeTxMWg38vNuZd8n5K9zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbmMuXo3qLzFr9/LvMSvqLuRu83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2zu82uTrfJx8bMysPJur/Nq67Mzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3FsMnNwJWkycW2xMjIwr3FzcimxM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NvL3NzcPFs7y1sb3EnL3Jvs3NtcTNzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbrAzc2/r8HGx7u4tMXHyb3Nzb21zM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzci2yM3Nv8SmxMe+ysjEq8G5zc3IusnNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Fvs3Nzby+orXIxca7qaK+wM3Nza7Ezc3Nzc3Nzc3Nzc3Nzc3Nzc3Nvr/Nzc3Atqm1xcW+xqqxvrrNzc23tc3Nzc3Nzc3Nzc3Nzc3Nzc3Nx7TEzc3Nv7+/tLzDv7qpxcO7zc3NwKXJzc3Nzc3Nzc3Nzc3Nzc3Nzbehyc3Nzb6vssbEwMa6xsHFvM3Nzcdurc3Nzc3Nzc3Nzc3Nzc3NzcGXjsnNzc2+u7vDv8LEv8DAwMfNzc3JhoXBzc3Nzc3Nzc3Nzc3Nzc22sp3Bzc3Nwry/wrzByLm+wcLBzc3NwLytu83Nzc3Nzc3Nzc3Nzc3Nob2+yM3Nzci8ur++yMe+yMK4xc3Nzci/vKnNzc3Nzc3Nzc3Nzc3Nyb61zM3Nzc3NvbnMwcTFv8y0uM3Nzc3NzLeyyc3Nzc3Nzc3Nzc3NzcDGvs3Nzc3Nzc3NzcbJxMDNzc3Nzc3Nzc25wr/Mzc3Nzc3Nzc3Nzcy+xsLNzc3Nzc3NzczAwsa7zM3Nzc3Nzc3Nwsi5zM3Nzc3Nzc3Nzc3CxcXCzc3NzcWekrHAxcnJw8TJw8DMzc3NzcXHxcHNzc3Nzc3Nzc3NwsbBzM3NzcmNKiI9r77FybzDwLaos8fNzc3NvsbGzc3Nzc3Nzc3Nzb/DxM3Nzc3JfSAfMIuyvsayvqeajqTIzc3NzcK+v83Nzc3Nzc3NzcXFxMnNzc3NzakmHyKGtY7JpJmJiYaxzc3Nzc3NwL7Izc3Nzc3Nzc3AxsLNzc3Nzc3JVyBZrbWmwbKug6Cpx83Nzc3Nzb+zws3Nzc3Nzc3KqLjDzc3Nzc3NzaVHpMesqau1yL/Lu83Nzc3Nzc3Ar67Jzc3Nzc3MwsjJyc3Nzc3Nzc3AeYvBxKqnwrrHy7zNzc3Nzc3NycjHwsrNzc3Mtr3CvM3Nzc3NzcS/k56LwLy5u7ustLeywMTNzc3Nzcy4x8C+zM3NxsW9sqzNzc3Nzc26g56lr7m5xLHAsK2Wd5LAzc3Nzc3NqbK8xcLNzb7Gt7a0zM3Nzc3NyW+ow7e5xcbBnZS3smyTyc3Nzc3NzLC1ucfBzc3Mv7qzr8zNzc3Nzc2Yb8LDv8vNzcm/wrtwsc3Nzc3NzcytubjBzc3NvsK7urfNzc3Nzc3Nsnm4ucPNzc3Nv4awfrzNzc3Nzc3MsLi5xsPNzcHDwMDEzc3Nzc3NzcORs7/Nzc3Nzc2kf5jGzc3Nzc3Nzca7wcPBzc3Nzc3Nzc3Nzc3Nzc3HksPMzc3Nzc3NzLuryc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzZ+1zc3Nzc3Nzc2xrc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2ctM3Nzc3Nzc3NnbbNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NtJrMzc3Nzc3NzaS6zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbmZxM3Nzc3NzcWbwc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3DqsTNzc3Nzc3Cob7Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NyJC4zc3Nzc3Nt5nIzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2gv83Nzc3NzZuhzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NmKbMzc3Nzc2Nrs3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzaKnw83Nzc3EhLXNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc28m8bNzc3NvYi4zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NvZe8zc3NzbeFtM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzbinr8nNzcaujrrNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3CtJm5zc29v4S8zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3MrbKEqs3NqbuNpc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzLu0vb7NzbvAtLrMzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbqySm26zc22ZW68yM3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3IuIOMy83NzHuCxMnNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzbu+vM3Nzc2uksLNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2zx7/Nzc3Nwoutzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NqbvCzc3NzcKGos3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzaKlzM3Nzc3HbJ/Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2ZpM3Nzc3NyF6hzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nl7HLzc3NzcVtps3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzafEwc3Nzc3BrLTNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2owcHNzc3Nway8zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nt8HBzc3NzcG8vc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzb/Iwc3Nzc3BqajNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3BvbzNzc3NwMC9zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NyLy/zc3NzcLAxs3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzbOlxM3Nzc3BvMPNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc2VhsXNzc3NuqzMzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nna26yc3Nya2yy83Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzL2zw8DNzcKzw77Mzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcHFnbjMzc3MuNDJvc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NycHGxZWnzc3Ny4zAxcfBys3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzcDGxsTGx83Nzc3DxMXFycXNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3N"}};
 
 RENDER.sources = function(){
   var r = $("#v-sources");
